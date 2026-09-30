@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhysicianTradeOffs | AI & Geospatial Compensation Intelligence</title>
+  <meta name="description" content="AI-powered medical compensation analytics, geospatial distance trade-offs, overhead split optimization, and clinical career intelligence for Canadian physicians.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <div class="app-layout">
+    <!-- Top Global Header -->
+    <header class="app-header">
+      <div class="header-branding">
+        <div class="brand-logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            <path d="M12 5v6"/>
+            <path d="M9 8h6"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Physician<span class="gradient-text">TradeOffs</span></h1>
+          <p class="brand-subtitle">AI & Geospatial Compensation Intelligence for Canadian Physicians</p>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <div class="status-badge" id="db-status-badge">
+          <span class="status-dot pulse"></span>
+          <span id="db-status-text">Connecting to PostgreSQL...</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">Dataset:</span>
+          <span class="metric-value" id="header-job-count">-- Jobs</span>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-label">City Focus:</span>
+          <span class="metric-value">Toronto & GTA</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs-container">
+      <div class="nav-tabs" role="tablist">
+        <button class="nav-tab is-active" id="tab-btn-overview" data-target="panel-overview">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Overview & Market
+        </button>
+        <button class="nav-tab nav-tab-glow" id="tab-btn-finder" data-target="panel-finder">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          🎯 AI Opportunity Matcher
+        </button>
+        <button class="nav-tab" id="tab-btn-distance" data-target="panel-distance">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          1. Distance vs Salary
+        </button>
+        <button class="nav-tab" id="tab-btn-split" data-target="panel-split">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+          2. Split vs Guarantee
+        </button>
+        <button class="nav-tab" id="tab-btn-hospital" data-target="panel-hospital">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 10h6"/><path d="M12 7v6"/></svg>
+          3. Hospital vs Clinic
+        </button>
+        <button class="nav-tab" id="tab-btn-locum" data-target="panel-locum">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>
+          4. Locum vs Permanent
+        </button>
+        <button class="nav-tab" id="tab-btn-emr" data-target="panel-emr">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+          5. Admin Burden & Wage
+        </button>
+        <button class="nav-tab" id="tab-btn-jobs" data-target="panel-jobs">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Live Job Explorer
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content Panels -->
+    <main class="app-main-content">
+
+      <!-- ============================================================== -->
+      <!-- PANEL 0: Executive Overview & Market Stats                     -->
+      <!-- ============================================================== -->
+      <section class="panel-view is-active" id="panel-overview">
+        <div class="section-hero">
+          <div class="hero-badge">PostgreSQL & ML Architecture</div>
+          <h2>GTA Physician Compensation & Strategic Trade-Off Models</h2>
+          <p class="hero-desc">
+            Standardizing unstructured medical recruiting data into quantitative decision vectors. Evaluate salary premiums, overhead efficiency, on-call burdens, and long-term equity across Greater Toronto.
+          </p>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon icon-blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Active Openings Scraped</span>
+              <span class="kpi-value" id="kpi-total-jobs">96</span>
+              <span class="kpi-subtext">Across 6 Key Specialties</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon icon-emerald">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v12"/></svg>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Average Annualized Salary</span>
+              <span class="kpi-value" id="kpi-avg-salary">$562,340</span>
+              <span class="kpi-subtext">CAD / Year (Extracted & Normalized)</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon icon-purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Peak Compensation</span>
+              <span class="kpi-value" id="kpi-max-salary">$1,000,000</span>
+              <span class="kpi-subtext">Specialized Pediatric / Derm FFS</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon icon-amber">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="kpi-meta">
+              <span class="kpi-label">Geospatial Radial Span</span>
+              <span class="kpi-value">0 – 26 km</span>
+              <span class="kpi-subtext">Downtown to York & Peel Regions</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specialty Salary Benchmarks Chart Card -->
+        <div class="card-section">
+          <div class="card-header">
+            <h3>Specialty Compensation Distribution (GTA Real Data)</h3>
+            <span class="badge-tag">Normalized Annual Gross</span>
+          </div>
+          <div class="specialty-bar-container" id="specialty-bars-container">
+            <!-- Dynamic specialty bars injected by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL: AI Opportunity & Location Matcher                       -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-finder">
+        <div class="section-hero">
+          <div class="hero-badge badge-cyan">Intelligent Recommender Engine</div>
+          <h2>AI Opportunity & Location Matcher</h2>
+          <p class="hero-desc">
+            Enter your current Toronto/GTA location and baseline contract parameters. The engine queries real active physician postings across Toronto, North York, Markham, Mississauga, Danforth, and Midtown to discover more lucrative positions nearby, accounting for GTA traffic, CRA vehicle write-offs ($0.70/km), fee split margins, and administrative overhead support.
+          </p>
+        </div>
+
+        <!-- Interactive Opportunity Search Console -->
+        <div class="glass-card finder-console-card">
+          <div class="card-header">
+            <div>
+              <h3>Location & Contract Parameters</h3>
+              <p class="card-subtitle">Set your baseline practice parameters or explore opportunities from any GTA hub.</p>
+            </div>
+            <span class="badge-tag">Real Database Matcher</span>
+          </div>
+
+          <!-- Quick Preset Pills -->
+          <div class="preset-locations-wrapper">
+            <span class="preset-label">Quick Location Presets:</span>
+            <div class="preset-chips-container" id="finder-presets-container">
+              <button type="button" class="preset-chip is-active" data-location="downtown toronto">Downtown Toronto</button>
+              <button type="button" class="preset-chip" data-location="midtown">Midtown (Yonge & Eg)</button>
+              <button type="button" class="preset-chip" data-location="bloor">Bloor West / Annex</button>
+              <button type="button" class="preset-chip" data-location="north york">North York</button>
+              <button type="button" class="preset-chip" data-location="markham">Markham</button>
+              <button type="button" class="preset-chip" data-location="mississauga">Mississauga</button>
+              <button type="button" class="preset-chip" data-location="danforth">Danforth</button>
+              <button type="button" class="preset-chip" data-location="forest hill">Forest Hill</button>
+            </div>
+          </div>
+
+          <form id="opportunity-finder-form" class="finder-form-grid">
+            <!-- Left Col: Location & Specialty -->
+            <div class="finder-form-col">
+              <div class="form-group">
+                <label for="finder-origin-input">
+                  <span>Current Practice Location / Neighborhood</span>
+                  <span class="field-hint">e.g. Downtown Toronto, Bloor St, M5V, Markham</span>
+                </label>
+                <div class="input-with-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <input type="text" id="finder-origin-input" class="form-control" value="Downtown Toronto" placeholder="Enter GTA neighborhood, street or postal code..." required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="finder-specialty-select">Medical Specialty Filter</label>
+                <select id="finder-specialty-select" class="form-control">
+                  <option value="All">All Specialties (Full Market)</option>
+                  <option value="Family Medicine">Family Medicine</option>
+                  <option value="Dermatology" selected>Dermatology</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Internal Medicine">Internal Medicine</option>
+                  <option value="Psychiatry">Psychiatry</option>
+                  <option value="Emergency Medicine">Emergency Medicine</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="finder-radius-select">Maximum Commute Radius</label>
+                <select id="finder-radius-select" class="form-control">
+                  <option value="15">Within 15 km (Local GTA)</option>
+                  <option value="25">Within 25 km (Regional Corridor)</option>
+                  <option value="40" selected>Within 40 km (Greater Golden Horseshoe)</option>
+                  <option value="60">Within 60 km (Extended Commute)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Right Col: Contract & Optimization Variables -->
+            <div class="finder-form-col">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="finder-gross-input">
+                    <span>Current Annual Gross ($ CAD)</span>
+                  </label>
+                  <input type="number" id="finder-gross-input" class="form-control" value="550000" step="10000">
+                </div>
+
+                <div class="form-group">
+                  <label for="finder-split-input">
+                    <span>Current Billing Split (%)</span>
+                  </label>
+                  <input type="number" id="finder-split-input" class="form-control" value="70" min="50" max="100" step="1">
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="finder-admin-hours">
+                    <span>Unpaid Charting / Admin (hrs/wk)</span>
+                  </label>
+                  <input type="number" id="finder-admin-hours" class="form-control" value="8" min="0" max="25" step="1">
+                </div>
+
+                <div class="form-group">
+                  <label for="finder-goal-select">Optimization Priority Goal</label>
+                  <select id="finder-goal-select" class="form-control">
+                    <option value="balanced" selected>🎯 Balanced Opportunity Score</option>
+                    <option value="net_profit">💰 Maximum Net Profit ($ CAD)</option>
+                    <option value="commute_roi">⚡ Highest Commute Driving ROI ($/hr)</option>
+                    <option value="split_margin">💼 Optimal Billing Split (≥ 75-80%)</option>
+                    <option value="admin_balance">🛡️ Lowest Admin Overhead (Full MOA / EMR)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-actions-row">
+                <button type="submit" id="btn-run-opportunity-matcher" class="btn btn-primary btn-large btn-glow">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m11 8 3 3-3 3"/></svg>
+                  Analyze & Suggest More Profitable Clinics Nearby
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Baseline vs Results Display -->
+        <div id="finder-results-section" class="finder-results-wrapper">
+          <!-- Baseline Card -->
+          <div class="glass-card baseline-display-card">
+            <div class="baseline-header">
+              <span class="baseline-tag">Your Current Baseline Anchor</span>
+              <h4 id="baseline-location-title">Downtown Toronto (Financial District / Bay & King)</h4>
+            </div>
+            <div class="baseline-stats-strip">
+              <div class="baseline-stat-item">
+                <span class="bstat-label">Specialty</span>
+                <span class="bstat-val" id="baseline-stat-specialty">Dermatology</span>
+              </div>
+              <div class="baseline-stat-item">
+                <span class="bstat-label">Est. Annual Gross</span>
+                <span class="bstat-val" id="baseline-stat-gross">$550,000</span>
+              </div>
+              <div class="baseline-stat-item">
+                <span class="bstat-label">Billing Split</span>
+                <span class="bstat-val" id="baseline-stat-split">70 / 30 (Physician 70%)</span>
+              </div>
+              <div class="baseline-stat-item highlight-cyan">
+                <span class="bstat-label">Current Net Take-Home</span>
+                <span class="bstat-val" id="baseline-stat-net">$385,000 CAD</span>
+              </div>
+              <div class="baseline-stat-item">
+                <span class="bstat-label">Unpaid Charting</span>
+                <span class="bstat-val" id="baseline-stat-admin">8 hrs / week</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Summary Strip -->
+          <div class="kpi-grid kpi-compact" id="finder-kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon icon-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+              <div class="kpi-meta">
+                <span class="kpi-label">Clinics Evaluated</span>
+                <span class="kpi-value" id="finder-kpi-total">--</span>
+                <span class="kpi-subtext">Within selected radius</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon icon-emerald"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><circle cx="12" cy="12" r="4"/></svg></div>
+              <div class="kpi-meta">
+                <span class="kpi-label">More Profitable Nearby</span>
+                <span class="kpi-value text-emerald" id="finder-kpi-profitable">--</span>
+                <span class="kpi-subtext">Beat current baseline</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon icon-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+              <div class="kpi-meta">
+                <span class="kpi-label">Max Annual Net Gain</span>
+                <span class="kpi-value text-cyan" id="finder-kpi-max-gain">--</span>
+                <span class="kpi-subtext">After CRA vehicle deduction</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon icon-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="kpi-meta">
+                <span class="kpi-label">Average Commute</span>
+                <span class="kpi-value" id="finder-kpi-avg-dist">--</span>
+                <span class="kpi-subtext">One-way drive in GTA</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison Canvas Visualizer -->
+          <div class="card-section">
+            <div class="card-header">
+              <div>
+                <h3>Net Gain vs. Commute Distance Frontier</h3>
+                <p class="card-subtitle">Visualizing real clinics: Net Annual Profit Gain (after CRA commute deduction) relative to distance from your origin.</p>
+              </div>
+              <span class="badge-tag">Interactive Opportunity Frontier</span>
+            </div>
+            <div class="chart-container" style="height: 280px;">
+              <canvas id="finder-canvas" width="900" height="280"></canvas>
+            </div>
+          </div>
+
+          <!-- Ranked Opportunities List -->
+          <div class="suggestions-list-section">
+            <div class="section-heading-row">
+              <h3>Ranked High-Alpha Clinic Opportunities Nearby</h3>
+              <span class="badge-tag" id="finder-results-badge">Sorted by Balanced Alpha Score</span>
+            </div>
+            <div class="suggestions-cards-container" id="finder-suggestions-container">
+              <!-- Dynamically populated by app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 1: Distance vs Salary Advisor                            -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-distance">
+        <div class="section-hero">
+          <div class="hero-badge">Trade-Off 1</div>
+          <h2>Geospatial Commute vs. Annualized Compensation Frontier</h2>
+          <p class="hero-desc">
+            Compare expected earnings between Location A (Downtown Toronto) and Location B (Outward Satellite Municipality). Evaluates spatial retention gradients, vehicle depreciation costs, and rural/regional grant eligibility.
+          </p>
+        </div>
+
+        <div class="advisor-grid">
+          <!-- Control Form -->
+          <div class="glass-card controls-card">
+            <h4>Simulation Parameters</h4>
+            
+            <div class="form-group">
+              <label for="dist-specialty-select">Medical Specialty</label>
+              <select id="dist-specialty-select" class="form-control">
+                <option value="Family Medicine">Family Medicine</option>
+                <option value="Pediatrics" selected>Pediatrics</option>
+                <option value="Internal Medicine">Internal Medicine</option>
+                <option value="Dermatology">Dermatology</option>
+                <option value="Emergency Medicine">Emergency Medicine</option>
+                <option value="Psychiatry">Psychiatry</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="dist-type-select">Employment Type</label>
+              <select id="dist-type-select" class="form-control">
+                <option value="full-time" selected>Full-Time Practice</option>
+                <option value="locum">Locum Tenens (+15% premium)</option>
+                <option value="part-time">Part-Time (0.6x)</option>
+              </select>
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="dist-from-km">Location A (Origin Distance):</label>
+                <span class="slider-display" id="dist-from-km-display">0 km (Downtown)</span>
+              </div>
+              <input type="range" id="dist-from-km" min="0" max="60" step="5" value="0" class="slider-control">
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="dist-to-km">Location B (Destination Distance):</label>
+                <span class="slider-display" id="dist-to-km-display">25 km (Markham/Mississauga)</span>
+              </div>
+              <input type="range" id="dist-to-km" min="5" max="100" step="5" value="25" class="slider-control">
+            </div>
+
+            <button id="btn-run-distance" class="btn-primary full-width">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Recalculate Geospatial Frontier
+            </button>
+          </div>
+
+          <!-- Results Display -->
+          <div class="glass-card results-card" id="distance-results-card">
+            <div class="comparison-banner">
+              <div class="comp-col">
+                <span class="comp-label">Location A (<span id="res-dist-a-label">0 km</span>)</span>
+                <span class="comp-value" id="res-dist-salary-a">$558,678</span>
+                <span class="comp-sub">Downtown Core</span>
+              </div>
+              <div class="comp-divider">
+                <span class="vs-circle">VS</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </div>
+              <div class="comp-col">
+                <span class="comp-label">Location B (<span id="res-dist-b-label">25 km</span>)</span>
+                <span class="comp-value highlight" id="res-dist-salary-b">$858,668</span>
+                <span class="comp-sub">Satellite / Regional Center</span>
+              </div>
+            </div>
+
+            <div class="stats-pills-row">
+              <div class="stat-pill">
+                <span class="sp-label">Gross Delta:</span>
+                <span class="sp-val text-emerald" id="res-dist-delta">+$299,990 (+53.7%)</span>
+              </div>
+              <div class="stat-pill">
+                <span class="sp-label">Spatial Premium:</span>
+                <span class="sp-val" id="res-dist-per-km">+$11,999 / km</span>
+              </div>
+              <div class="stat-pill">
+                <span class="sp-label">Net Gain (after vehicle wear):</span>
+                <span class="sp-val text-cyan" id="res-dist-net">+$292,290</span>
+              </div>
+              <div class="stat-pill">
+                <span class="sp-label">Driving ROI:</span>
+                <span class="sp-val" id="res-dist-hourly-drive">$1,137 / hr driving</span>
+              </div>
+            </div>
+
+            <!-- Visual Canvas Curve -->
+            <div class="chart-wrapper">
+              <div class="chart-title">Compensation Growth Gradient vs Downtown Distance</div>
+              <canvas id="canvas-distance-curve" width="600" height="200"></canvas>
+            </div>
+
+            <div class="recommendation-callout" id="res-dist-recommendation">
+              <strong>Advisor Recommendation:</strong> Moving 25 km outward provides an estimated +53.7% higher gross annual income (+$299,990 CAD). Regional incentives often apply.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 2: Overhead Split vs Guaranteed Rate Advisor            -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-split">
+        <div class="section-hero">
+          <div class="hero-badge">Trade-Off 2</div>
+          <h2>Fee-For-Service (FFS) Overhead Split vs. Guaranteed Base Floor</h2>
+          <p class="hero-desc">
+            Model volume volatility against guaranteed minimums. Find the precise daily patient break-even crossover point where percentage splits out-earn guaranteed daily rates.
+          </p>
+        </div>
+
+        <div class="advisor-grid">
+          <div class="glass-card controls-card">
+            <h4>Billing & Contract Variables</h4>
+            
+            <div class="form-group">
+              <label for="split-specialty">Specialty</label>
+              <select id="split-specialty" class="form-control">
+                <option value="Family Medicine" selected>Family Medicine ($52/pt)</option>
+                <option value="Dermatology">Dermatology ($88/pt)</option>
+                <option value="Pediatrics">Pediatrics ($58/pt)</option>
+                <option value="Internal Medicine">Internal Medicine ($110/pt)</option>
+              </select>
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="split-patient-vol">Daily Patient Volume:</label>
+                <span class="slider-display" id="split-vol-display">32 patients / day</span>
+              </div>
+              <input type="range" id="split-patient-vol" min="15" max="55" step="1" value="32" class="slider-control">
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="split-physician-pct">Physician Split %:</label>
+                <span class="slider-display" id="split-pct-display">75% (75/25 split)</span>
+              </div>
+              <input type="range" id="split-physician-pct" min="60" max="90" step="5" value="75" class="slider-control">
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="split-guarantee-floor">Guaranteed Daily Minimum:</label>
+                <span class="slider-display" id="split-floor-display">$1,200 / day</span>
+              </div>
+              <input type="range" id="split-guarantee-floor" min="800" max="2200" step="100" value="1200" class="slider-control">
+            </div>
+
+            <button id="btn-run-split" class="btn-primary full-width">
+              Simulate Split vs Guarantee
+            </button>
+          </div>
+
+          <div class="glass-card results-card" id="split-results-card">
+            <div class="comparison-banner">
+              <div class="comp-col">
+                <span class="comp-label">Guaranteed Daily Base Floor</span>
+                <span class="comp-value" id="res-split-guarantee-ann">$264,000</span>
+                <span class="comp-sub">Risk-free ($1,200/day × 220d)</span>
+              </div>
+              <div class="comp-divider">
+                <span class="vs-circle">VS</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </div>
+              <div class="comp-col">
+                <span class="comp-label">75/25 Split Annual Billings</span>
+                <span class="comp-value highlight" id="res-split-split-ann">$274,560</span>
+                <span class="comp-sub">At 32 patients/day</span>
+              </div>
+            </div>
+
+            <div class="crossover-highlight-box">
+              <div class="ch-badge">CRITICAL CROSSOVER THRESHOLD</div>
+              <div class="ch-stat">
+                Break-even occurs at exactly <span class="highlight-number" id="res-split-breakeven">31 patients / day</span>
+              </div>
+              <p id="res-split-crossover-text">If you see fewer than 31 patients, choose the daily guarantee. If you see 31 or more, take the 75/25 split.</p>
+            </div>
+
+            <!-- Visual Break-even Canvas -->
+            <div class="chart-wrapper">
+              <div class="chart-title">Daily Patient Volume Sensitivity & Break-Even Curve</div>
+              <canvas id="canvas-split-curve" width="600" height="200"></canvas>
+            </div>
+
+            <div class="recommendation-callout" id="res-split-recommendation">
+              <strong>Recommendation:</strong> At 32 patients/day, the 75/25 split out-earns the guaranteed minimum by +$10,560 CAD/yr (+4.0%). Break-even is 31 patients/day.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 3: Hospitalist vs Clinic Advisor                         -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-hospital">
+        <div class="section-hero">
+          <div class="hero-badge">Trade-Off 3</div>
+          <h2>Hospitalist / Inpatient vs. Ambulatory Community Clinic</h2>
+          <p class="hero-desc">
+            Dissecting the top-line compensation trap: why high hospitalist billings often mask a lower effective wage per actual hour worked when mandatory on-call and night rounds are factored in.
+          </p>
+        </div>
+
+        <div class="advisor-grid">
+          <div class="glass-card controls-card">
+            <h4>Practice Modality & On-Call</h4>
+            
+            <div class="form-group">
+              <label for="hosp-specialty">Specialty</label>
+              <select id="hosp-specialty" class="form-control">
+                <option value="Internal Medicine" selected>Internal Medicine</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Family Medicine">Family Medicine (Hospitalist)</option>
+              </select>
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="hosp-oncall-weekends">Hospital On-Call Weekends / Month:</label>
+                <span class="slider-display" id="hosp-oncall-display">1 weekend / month</span>
+              </div>
+              <input type="range" id="hosp-oncall-weekends" min="0" max="3" step="1" value="1" class="slider-control">
+            </div>
+
+            <button id="btn-run-hospital" class="btn-primary full-width">
+              Compare Practice Modalities
+            </button>
+          </div>
+
+          <div class="glass-card results-card">
+            <div class="dual-cards-row">
+              <div class="mode-card clinic-card">
+                <div class="mc-header">
+                  <div class="mc-icon">🏥</div>
+                  <div>
+                    <h5>Ambulatory Outpatient Clinic</h5>
+                    <span class="mc-tag">High Autonomy</span>
+                  </div>
+                </div>
+                <div class="mc-salary" id="res-hosp-clinic-sal">$460,000 / yr</div>
+                <ul class="mc-metrics">
+                  <li><strong>Weekly Hours:</strong> 37.5 hrs (no call)</li>
+                  <li><strong>Effective Hourly Wage:</strong> <span class="badge-emerald" id="res-hosp-clinic-hourly">$256 / hr</span></li>
+                  <li><strong>Burnout Index:</strong> 32 / 100 (Low-Moderate)</li>
+                  <li><strong>Weekend Duty:</strong> Zero</li>
+                </ul>
+              </div>
+
+              <div class="mode-card hospital-card">
+                <div class="mc-header">
+                  <div class="mc-icon">🏢</div>
+                  <div>
+                    <h5>Hospitalist / Inpatient Ward</h5>
+                    <span class="mc-tag">High Gross</span>
+                  </div>
+                </div>
+                <div class="mc-salary highlight" id="res-hosp-hospital-sal">$585,000 / yr</div>
+                <ul class="mc-metrics">
+                  <li><strong>Weekly Hours:</strong> 52.5 hrs (with call)</li>
+                  <li><strong>Effective Hourly Wage:</strong> <span class="badge-amber" id="res-hosp-hospital-hourly">$232 / hr</span></li>
+                  <li><strong>Burnout Index:</strong> 70 / 100 (High)</li>
+                  <li><strong>Weekend Duty:</strong> 1 weekend/month</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="recommendation-callout alert-warning" id="res-hosp-recommendation">
+              <strong>Paradox Alert:</strong> While hospital work pays +$125,000 more gross, Outpatient Clinic pays a HIGHER effective hourly rate ($256/hr vs $232/hr) because hospitalist roles demand 720 extra hours/yr.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 4: Locum vs Permanent Practice Advisor                  -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-locum">
+        <div class="section-hero">
+          <div class="hero-badge">Trade-Off 4</div>
+          <h2>Locum Tenens vs. Permanent Practice Equity</h2>
+          <p class="hero-desc">
+            Immediate high daily cashflow with tax-free accommodations and travel perks vs. Compounding FHO patient rostering bonuses and long-term clinic partnership equity.
+          </p>
+        </div>
+
+        <div class="advisor-grid">
+          <div class="glass-card controls-card">
+            <h4>Career Planning Horizon</h4>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="locum-years">Planning Horizon:</label>
+                <span class="slider-display" id="locum-years-display">3 Years</span>
+              </div>
+              <input type="range" id="locum-years" min="1" max="5" step="1" value="3" class="slider-control">
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="locum-roster">Permanent Target Roster Size:</label>
+                <span class="slider-display" id="locum-roster-display">1,200 Patients</span>
+              </div>
+              <input type="range" id="locum-roster" min="800" max="2000" step="100" value="1200" class="slider-control">
+            </div>
+
+            <button id="btn-run-locum" class="btn-primary full-width">
+              Simulate Wealth Trajectory
+            </button>
+          </div>
+
+          <div class="glass-card results-card">
+            <div class="comparison-banner">
+              <div class="comp-col">
+                <span class="comp-label">Year 1 Locum Tenens</span>
+                <span class="comp-value" id="res-locum-y1">$331,700</span>
+                <span class="comp-sub">Daily + $27k Housing/Travel</span>
+              </div>
+              <div class="comp-divider">
+                <span class="vs-circle">VS</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </div>
+              <div class="comp-col">
+                <span class="comp-label">Year 1 Permanent Practice</span>
+                <span class="comp-value highlight" id="res-perm-y1">$342,500</span>
+                <span class="comp-sub">Capitation + FHO + Shadow</span>
+              </div>
+            </div>
+
+            <!-- Multi-year Table -->
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Locum Annual</th>
+                    <th>Permanent Annual</th>
+                    <th>Cumulative Locum</th>
+                    <th>Cumulative Perm</th>
+                    <th>Perm Advantage</th>
+                  </tr>
+                </thead>
+                <tbody id="locum-trajectory-tbody">
+                  <!-- Dynamic rows injected by app.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="recommendation-callout" id="res-locum-recommendation">
+              <strong>Strategy Insight:</strong> For a 3+ year horizon, Permanent practice generates significantly greater wealth (+$98,400 CAD cumulative) through compounding roster capitation, FHO access bonuses, and clinic equity.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 5: EMR & Admin Burden Simulator                          -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-emr">
+        <div class="section-hero">
+          <div class="hero-badge">Trade-Off 5</div>
+          <h2>Administrative & EMR Burden vs. Net Clinical Hourly Wage</h2>
+          <p class="hero-desc">
+            Is low overhead worth it? Calculate how unpaid charting, inbox review, and lab triage destroy your real hourly rate—and why paying 10% more in overhead for medical office staff pays for itself.
+          </p>
+        </div>
+
+        <div class="advisor-grid">
+          <div class="glass-card controls-card">
+            <h4>Practice Time & Overhead</h4>
+            
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="emr-admin-hours">Weekly Unpaid Admin Hours:</label>
+                <span class="slider-display" id="emr-admin-display">12 hrs / week</span>
+              </div>
+              <input type="range" id="emr-admin-hours" min="4" max="20" step="1" value="12" class="slider-control">
+            </div>
+
+            <div class="form-group slider-group">
+              <div class="slider-header">
+                <label for="emr-gross-billing">Annual Gross Billings:</label>
+                <span class="slider-display" id="emr-billing-display">$480,000 CAD</span>
+              </div>
+              <input type="range" id="emr-gross-billing" min="300000" max="800000" step="20000" value="480000" class="slider-control">
+            </div>
+
+            <button id="btn-run-emr" class="btn-primary full-width">
+              Simulate Time vs Overhead
+            </button>
+          </div>
+
+          <div class="glass-card results-card">
+            <div class="tri-cards-row">
+              <div class="scenario-card">
+                <div class="sc-badge text-amber">Lean Practice (18% Overhead)</div>
+                <div class="sc-val" id="emr-sc1-hourly">$186 / hr</div>
+                <div class="sc-label">Real Effective Hourly Wage</div>
+                <p class="sc-detail">44 total hrs/wk (32 clinic + 12 admin). High burnout from evening inbox triage.</p>
+              </div>
+
+              <div class="scenario-card">
+                <div class="sc-badge text-emerald">Full Support (28% Overhead) - Time Off</div>
+                <div class="sc-val" id="emr-sc2-hourly">$200 / hr</div>
+                <div class="sc-label">Real Effective Hourly Wage</div>
+                <p class="sc-detail">36 total hrs/wk (admin cut to 4 hrs). <strong>384 hours of personal time saved/yr</strong>.</p>
+              </div>
+
+              <div class="scenario-card">
+                <div class="sc-badge text-cyan">Full Support - Converted to Growth</div>
+                <div class="sc-val" id="emr-sc3-income">+$16,800 / yr</div>
+                <div class="sc-label">Net Annual Income Boost</div>
+                <p class="sc-detail">Reinvesting half of saved admin hours into seeing patients completely offsets higher overhead.</p>
+              </div>
+            </div>
+
+            <div class="recommendation-callout" id="res-emr-recommendation">
+              <strong>Clinical Insight:</strong> Paying 10% more in clinic overhead to get full MOA & EMR support saves 384 hours of unpaid administrative drudgery per year. If you reinvest just half those hours into patient care, your annual net income increases by +$16,800 CAD.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 6: Live Job Explorer                                     -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-jobs">
+        <div class="section-hero">
+          <div class="hero-badge">Real Scraped Database</div>
+          <h2>Live Physician Jobs in Greater Toronto Area</h2>
+          <p class="hero-desc">
+            Directly querying our PostgreSQL & Supabase database. Filter by medical specialty, practice type, and distance from the downtown core.
+          </p>
+        </div>
+
+        <div class="filter-bar glass-card">
+          <div class="search-input-wrapper">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="job-search-input" placeholder="Search clinic, title, or keywords (e.g. 'Walk-in', 'FHO', 'Markham')...">
+          </div>
+
+          <select id="filter-specialty-select" class="filter-select">
+            <option value="All">All Specialties</option>
+            <option value="Family Medicine">Family Medicine</option>
+            <option value="Internal Medicine">Internal Medicine</option>
+            <option value="Pediatrics">Pediatrics</option>
+            <option value="Dermatology">Dermatology</option>
+            <option value="Emergency Medicine">Emergency Medicine</option>
+            <option value="Psychiatry">Psychiatry</option>
+          </select>
+
+          <select id="filter-type-select" class="filter-select">
+            <option value="All">All Practice Types</option>
+            <option value="full-time">Full-Time</option>
+            <option value="locum">Locum</option>
+            <option value="part-time">Part-Time</option>
+          </select>
+        </div>
+
+        <div class="jobs-table-container glass-card">
+          <div class="jobs-table-header">
+            <h4>Matching Job Opportunities (<span id="jobs-count-badge">0</span>)</h4>
+            <span class="table-legend">Distances calculated via Haversine formula from Downtown Toronto</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table" id="jobs-data-table">
+              <thead>
+                <tr>
+                  <th>Job Title & Organization</th>
+                  <th>Specialty</th>
+                  <th>Type</th>
+                  <th>Location</th>
+                  <th>Distance</th>
+                  <th>Annual Compensation</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-table-body">
+                <!-- Dynamically loaded jobs -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Job Detail Modal Dialog -->
+    <dialog id="job-detail-dialog" class="glass-dialog">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h3 id="modal-job-title">Job Details</h3>
+          <button id="modal-close-btn" class="modal-close">&times;</button>
+        </div>
+        <div class="dialog-body" id="modal-job-body">
+          <!-- Dynamic details injected here -->
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Global App Footer -->
+    <footer class="app-footer">
+      <p>PhysicianCareers.ca Intelligence Engine &bull; Built with Playwright, PostgreSQL/Supabase, and CatBoost &bull; Fully Self-Contained</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
