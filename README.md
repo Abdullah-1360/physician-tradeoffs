@@ -1,5 +1,8 @@
 # PhysicianCareers.ca Industry-Grade Playwright Scraper & ML Pipeline
 
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat&logo=vercel)](https://physiciansproject.vercel.app)
+🌐 **Live Web Application**: [https://physiciansproject.vercel.app](https://physiciansproject.vercel.app)
+
 A self-contained, stealth-enabled web scraper and geospatial machine learning pipeline built with Node.js, Playwright, PostgreSQL / Supabase, and CatBoost/XGBoost.
 
 ---
