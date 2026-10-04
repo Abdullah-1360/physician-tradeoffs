@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     url TEXT NOT NULL,
     title VARCHAR(255) NOT NULL,
     specialty VARCHAR(150) NOT NULL,
-    employment_type VARCHAR(50),               -- 'locum', 'full-time', 'part-time', 'permanent'
+    employment_type VARCHAR(50),
     company VARCHAR(255),
     
     -- Location & Geospatial Features
@@ -40,19 +40,19 @@ CREATE TABLE IF NOT EXISTS jobs (
     location_formatted TEXT,
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
-    distance_from_toronto_km DOUBLE PRECISION, -- Key feature for distance vs salary modeling
+    distance_from_toronto_km DOUBLE PRECISION,
 
     -- ML Compensation Targets & Extracted Features
     compensation_raw TEXT,
-    pay_rate_type VARCHAR(50),                 -- 'hourly', 'daily', 'annual', 'fee_for_service', 'contract', 'split'
+    pay_rate_type VARCHAR(50),
     salary_min NUMERIC(12, 2),
     salary_max NUMERIC(12, 2),
     salary_avg NUMERIC(12, 2),
-    annualized_salary NUMERIC(12, 2),          -- Standardized annual salary target for ML models
+    annualized_salary NUMERIC(12, 2),
     
     -- Additional Medical Financial Features
-    physician_split_pct NUMERIC(5, 2),         -- e.g. 70.0 for 70/30 split
-    clinic_split_pct NUMERIC(5, 2),            -- e.g. 30.0
+    physician_split_pct NUMERIC(5, 2),
+    clinic_split_pct NUMERIC(5, 2),
     signing_bonus NUMERIC(10, 2),
     relocation_bonus NUMERIC(10, 2),
     accommodations_allowance NUMERIC(10, 2),
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS jobs (
 
     description_summary TEXT,
     full_description_text TEXT,
-    structured_sections JSONB,                 -- Rich subsections in JSONB format
+    structured_sections JSONB,
     external_links JSONB,
     raw_json_ld JSONB,
     
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION calculate_distance_km(
 )
 RETURNS DOUBLE PRECISION AS $$
 DECLARE
-    r DOUBLE PRECISION := 6371; -- Earth radius in km
+    r DOUBLE PRECISION := 6371;
     dlat DOUBLE PRECISION;
     dlon DOUBLE PRECISION;
     a DOUBLE PRECISION;
