@@ -180,6 +180,14 @@ async function parseJobDetail(page) {
     }
   }
 
+  // Extract validThrough date from JSON-LD
+  const validThrough = jsonLd?.validThrough ? jsonLd.validThrough.slice(0, 10) : null;
+
+  // Extract direct clinic contact emails from description body
+  const descText = domData?.raw_description_text || jsonLd?.description || '';
+  const emailMatches = Array.from(new Set(descText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || []))
+    .filter((email) => !email.toLowerCase().includes('physiciancareers.ca'));
+
   // Merge and normalize fields into unified, clean model
   const unifiedJob = {
     job_id: jobId,
@@ -199,8 +207,11 @@ async function parseJobDetail(page) {
     dates: {
       posted_date: domData?.posted_date || (jsonLd?.datePosted ? jsonLd.datePosted.slice(0, 10) : null),
       posted_datetime_iso: jsonLd?.datePosted || null,
-      closing_date: closingDate || null,
+      closing_date: closingDate || validThrough || null,
+      valid_through: validThrough,
+      start_date: domData?.start_date || null,
     },
+    contact_emails: emailMatches,
     map: domData?.map || null,
     application: domData?.application || { is_gated: false, gate_message: null },
     structured_sections: domData?.structured_sections || {},

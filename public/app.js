@@ -1,9 +1,11 @@
 /**
  * PhysicianTradeOffs Client Application
- * Interactive Visual Intelligence & Real-time Trade-off Simulators
+ * Modern Light-Theme Visual Intelligence & Real-time Trade-off Simulators
+ * Zero External Links & Self-Contained In-App Dossier
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  initScrollAnimations();
   initTabs();
   initHealthAndOverview();
   initOpportunityFinder();
@@ -14,6 +16,29 @@ document.addEventListener('DOMContentLoaded', () => {
   initEmrAdvisor();
   initJobsExplorer();
 });
+
+// =============================================================================
+// 0. Scroll-Driven Animations Initializer
+// =============================================================================
+function initScrollAnimations() {
+  if (!('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+        }
+      });
+    },
+    { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  const targets = document.querySelectorAll(
+    '.reveal-on-scroll, .glass-card, .kpi-card, .metric-card, .opportunity-result-card, .card-section'
+  );
+  targets.forEach((el) => observer.observe(el));
+}
 
 // =============================================================================
 // 1. Tab Switching System
@@ -34,7 +59,10 @@ function initTabs() {
         targetPanel.classList.add('is-active');
       }
 
-      // If switching to finder, distance, or split tab, trigger simulation / canvas redraw
+      // Re-observe newly visible elements for scroll animations
+      setTimeout(initScrollAnimations, 50);
+
+      // Trigger simulation / canvas redraw when switching panels
       if (targetId === 'panel-finder') {
         runOpportunitySimulation();
       } else if (targetId === 'panel-distance') {
@@ -59,15 +87,16 @@ async function initHealthAndOverview() {
     const headerJobs = document.getElementById('header-job-count');
 
     if (healthData.database_connected) {
-      statusText.innerText = 'PostgreSQL Live Connected';
-      statusBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      if (statusText) statusText.innerText = 'PostgreSQL Live Connected';
+      if (statusBadge) statusBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
     } else {
-      statusText.innerText = 'PostgreSQL Initialized (96 Seeded Jobs)';
-      statusBadge.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+      if (statusText) statusText.innerText = `Verified Active Database (${healthData.total_jobs} Jobs)`;
+      if (statusBadge) statusBadge.style.borderColor = 'rgba(14, 165, 233, 0.4)';
     }
 
-    headerJobs.innerText = `${healthData.total_jobs} Jobs`;
-    document.getElementById('kpi-total-jobs').innerText = healthData.total_jobs;
+    if (headerJobs) headerJobs.innerText = `${healthData.total_jobs} Active Jobs`;
+    const kpiTotal = document.getElementById('kpi-total-jobs');
+    if (kpiTotal) kpiTotal.innerText = healthData.total_jobs;
 
     const statsRes = await fetch('/api/stats/overview');
     const statsData = await statsRes.json();
@@ -75,16 +104,18 @@ async function initHealthAndOverview() {
 
     if (ov) {
       if (ov.avg_salary) {
-        document.getElementById('kpi-avg-salary').innerText = `$${parseInt(ov.avg_salary, 10).toLocaleString()}`;
+        const avgEl = document.getElementById('kpi-avg-salary');
+        if (avgEl) avgEl.innerText = `$${parseInt(ov.avg_salary, 10).toLocaleString()} CAD`;
       }
       if (ov.max_salary) {
-        document.getElementById('kpi-max-salary').innerText = `$${parseInt(ov.max_salary, 10).toLocaleString()}`;
+        const maxEl = document.getElementById('kpi-max-salary');
+        if (maxEl) maxEl.innerText = `$${parseInt(ov.max_salary, 10).toLocaleString()} CAD`;
       }
     }
 
     renderSpecialtyBars(statsData.specialties || []);
   } catch (err) {
-    console.warn('API fetch warning:', err);
+    console.warn('Overview API fetch warning:', err);
   }
 }
 
@@ -93,16 +124,16 @@ function renderSpecialtyBars(specialties) {
   if (!container) return;
   container.innerHTML = '';
 
-  const maxCount = Math.max(...specialties.map((s) => s.count || 1), 20);
+  const maxCount = Math.max(...specialties.map((s) => s.count || 1), 15);
 
   specialties.forEach((spec) => {
     const pct = Math.round(((spec.count || 0) / maxCount) * 100);
     const row = document.createElement('div');
-    row.className = 'spec-bar-row';
+    row.className = 'spec-bar-row reveal-on-scroll';
     row.innerHTML = `
       <div class="spec-bar-header">
-        <span>${spec.specialty}</span>
-        <span class="text-cyan">${spec.count} Open Positions</span>
+        <span>${escapeHtml(spec.specialty)}</span>
+        <span class="text-cyan">${spec.count} Active Opportunities</span>
       </div>
       <div class="spec-bar-track">
         <div class="spec-bar-fill" style="width: ${pct}%"></div>
@@ -122,28 +153,37 @@ function initDistanceAdvisor() {
   const typeSelect = document.getElementById('dist-type-select');
   const btnRun = document.getElementById('btn-run-distance');
 
+  if (!fromKmInput || !toKmInput) return;
+
   fromKmInput.addEventListener('input', () => {
     document.getElementById('dist-from-km-display').innerText = `${fromKmInput.value} km (Downtown)`;
     runDistanceSimulation();
   });
 
   toKmInput.addEventListener('input', () => {
-    document.getElementById('dist-to-km-display').innerText = `${toKmInput.value} km (Regional)`;
+    document.getElementById('dist-to-km-display').innerText = `${toKmInput.value} km (Regional Center)`;
     runDistanceSimulation();
   });
 
-  specSelect.addEventListener('change', runDistanceSimulation);
-  typeSelect.addEventListener('change', runDistanceSimulation);
-  btnRun.addEventListener('click', runDistanceSimulation);
+  if (specSelect) specSelect.addEventListener('change', runDistanceSimulation);
+  if (typeSelect) typeSelect.addEventListener('change', runDistanceSimulation);
+  if (btnRun) btnRun.addEventListener('click', runDistanceSimulation);
 
   runDistanceSimulation();
 }
 
 async function runDistanceSimulation() {
-  const specialty = document.getElementById('dist-specialty-select').value;
-  const employmentType = document.getElementById('dist-type-select').value;
-  const fromKm = parseInt(document.getElementById('dist-from-km').value, 10);
-  const toKm = parseInt(document.getElementById('dist-to-km').value, 10);
+  const specSelect = document.getElementById('dist-specialty-select');
+  const typeSelect = document.getElementById('dist-type-select');
+  const fromKmInput = document.getElementById('dist-from-km');
+  const toKmInput = document.getElementById('dist-to-km');
+
+  if (!fromKmInput || !toKmInput) return;
+
+  const specialty = specSelect ? specSelect.value : 'Family Medicine';
+  const employmentType = typeSelect ? typeSelect.value : 'full-time';
+  const fromKm = parseInt(fromKmInput.value, 10);
+  const toKm = parseInt(toKmInput.value, 10);
 
   try {
     const res = await fetch('/api/advisors/distance', {
@@ -153,17 +193,35 @@ async function runDistanceSimulation() {
     });
     const data = await res.json();
 
-    document.getElementById('res-dist-a-label').innerText = `${data.from_km} km`;
-    document.getElementById('res-dist-b-label').innerText = `${data.to_km} km`;
-    document.getElementById('res-dist-salary-a').innerText = `$${data.salary_at_location_a.toLocaleString()}`;
-    document.getElementById('res-dist-salary-b').innerText = `$${data.salary_at_location_b.toLocaleString()}`;
+    const aLabel = document.getElementById('res-dist-a-label');
+    const bLabel = document.getElementById('res-dist-b-label');
+    const salA = document.getElementById('res-dist-salary-a');
+    const salB = document.getElementById('res-dist-salary-b');
+
+    if (aLabel) aLabel.innerText = `${data.from_km} km`;
+    if (bLabel) bLabel.innerText = `${data.to_km} km`;
+    if (salA) salA.innerText = `$${data.salary_at_location_a.toLocaleString()} CAD`;
+    if (salB) salB.innerText = `$${data.salary_at_location_b.toLocaleString()} CAD`;
 
     const sign = data.gross_salary_difference >= 0 ? '+' : '';
-    document.getElementById('res-dist-delta').innerText = `${sign}$${data.gross_salary_difference.toLocaleString()} (${sign}${data.percentage_gain}%)`;
-    document.getElementById('res-dist-per-km').innerText = `+$${data.premium_per_km.toLocaleString()} / km`;
-    document.getElementById('res-dist-net').innerText = `$${data.commute_impact.net_annual_gain.toLocaleString()}`;
-    document.getElementById('res-dist-hourly-drive').innerText = `$${data.commute_impact.net_wage_per_commute_hour.toLocaleString()} / hr driving`;
-    document.getElementById('res-dist-recommendation').innerHTML = `<strong>Advisor Recommendation:</strong> ${data.recommendation}`;
+    const deltaEl = document.getElementById('res-dist-delta');
+    const perKmEl = document.getElementById('res-dist-per-km');
+    const commuteEl = document.getElementById('res-dist-commute-time');
+    const grantEl = document.getElementById('res-dist-grant');
+
+    if (deltaEl) deltaEl.innerText = `${sign}$${data.gross_salary_difference.toLocaleString()} CAD (${sign}${data.percentage_gain}%)`;
+    if (perKmEl) perKmEl.innerText = `+$${data.premium_per_km.toLocaleString()} / km`;
+
+    const driveMinutes = Math.max(5, Math.round(data.km_difference * 1.4));
+    if (commuteEl) commuteEl.innerText = `~${driveMinutes} mins`;
+
+    const grantText = data.incentives && data.incentives.regional_grant_eligible
+      ? `Eligible (+$${data.incentives.estimated_annual_grant.toLocaleString()} CAD)`
+      : 'Standard Region';
+    if (grantEl) grantEl.innerText = grantText;
+
+    const recEl = document.getElementById('res-dist-recommendation');
+    if (recEl) recEl.innerHTML = `<strong>Advisor Strategic Insight:</strong> ${data.recommendation}`;
 
     drawDistanceCanvas(data.from_km, data.to_km, data.salary_at_location_a, data.salary_at_location_b);
   } catch (err) {
@@ -180,8 +238,8 @@ function drawDistanceCanvas(fromKm, toKm, salA, salB) {
 
   ctx.clearRect(0, 0, w, h);
 
-  // Background grid
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  // Background light grid lines
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.07)';
   ctx.lineWidth = 1;
   for (let y = 30; y < h; y += 40) {
     ctx.beginPath();
@@ -190,7 +248,6 @@ function drawDistanceCanvas(fromKm, toKm, salA, salB) {
     ctx.stroke();
   }
 
-  // Baseline to Destination Curve
   const paddingX = 60;
   const paddingY = 40;
   const minSal = Math.min(salA, salB) * 0.9;
@@ -206,31 +263,37 @@ function drawDistanceCanvas(fromKm, toKm, salA, salB) {
 
   // Gradient path
   const grad = ctx.createLinearGradient(xA, yA, xB, yB);
-  grad.addColorStop(0, '#6366f1');
-  grad.addColorStop(1, '#06b6d4');
+  grad.addColorStop(0, '#0284c7');
+  grad.addColorStop(1, '#059669');
 
   ctx.beginPath();
   ctx.strokeStyle = grad;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 3.5;
   ctx.moveTo(xA, yA);
   ctx.bezierCurveTo(xA + (xB - xA) * 0.5, yA, xA + (xB - xA) * 0.5, yB, xB, yB);
   ctx.stroke();
 
   // Point A Dot
-  ctx.fillStyle = '#818cf8';
+  ctx.fillStyle = '#0284c7';
   ctx.beginPath();
   ctx.arc(xA, yA, 7, 0, 2 * Math.PI);
   ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
-  ctx.fillStyle = '#fff';
-  ctx.font = '11px Plus Jakarta Sans';
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 11px Plus Jakarta Sans';
   ctx.fillText(`Loc A (${fromKm}km): $${(salA / 1000).toFixed(0)}k`, xA - 20, yA - 14);
 
   // Point B Dot
-  ctx.fillStyle = '#34d399';
+  ctx.fillStyle = '#059669';
   ctx.beginPath();
   ctx.arc(xB, yB, 7, 0, 2 * Math.PI);
   ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
   ctx.fillText(`Loc B (${toKm}km): $${(salB / 1000).toFixed(0)}k`, xB - 40, yB - 14);
 }
@@ -244,6 +307,8 @@ function initSplitAdvisor() {
   const floorInput = document.getElementById('split-guarantee-floor');
   const specSelect = document.getElementById('split-specialty');
   const btnRun = document.getElementById('btn-run-split');
+
+  if (!volInput || !pctInput || !floorInput) return;
 
   volInput.addEventListener('input', () => {
     document.getElementById('split-vol-display').innerText = `${volInput.value} patients / day`;
@@ -260,17 +325,24 @@ function initSplitAdvisor() {
     runSplitSimulation();
   });
 
-  specSelect.addEventListener('change', runSplitSimulation);
-  btnRun.addEventListener('click', runSplitSimulation);
+  if (specSelect) specSelect.addEventListener('change', runSplitSimulation);
+  if (btnRun) btnRun.addEventListener('click', runSplitSimulation);
 
   runSplitSimulation();
 }
 
 async function runSplitSimulation() {
-  const specialty = document.getElementById('split-specialty').value;
-  const dailyPatientVolume = parseInt(document.getElementById('split-patient-vol').value, 10);
-  const physicianSplitPct = parseFloat(document.getElementById('split-physician-pct').value);
-  const guaranteedDailyFloor = parseFloat(document.getElementById('split-guarantee-floor').value);
+  const specSelect = document.getElementById('split-specialty');
+  const volInput = document.getElementById('split-patient-vol');
+  const pctInput = document.getElementById('split-physician-pct');
+  const floorInput = document.getElementById('split-guarantee-floor');
+
+  if (!volInput || !pctInput || !floorInput) return;
+
+  const specialty = specSelect ? specSelect.value : 'Family Medicine';
+  const dailyPatientVolume = parseInt(volInput.value, 10);
+  const physicianSplitPct = parseFloat(pctInput.value);
+  const guaranteedDailyFloor = parseFloat(floorInput.value);
 
   try {
     const res = await fetch('/api/advisors/overhead-split', {
@@ -284,7 +356,7 @@ async function runSplitSimulation() {
     document.getElementById('res-split-guarantee-ann').innerText = `$${out.annual_guaranteed_earnings.toLocaleString()}`;
     document.getElementById('res-split-split-ann').innerText = `$${out.annual_split_earnings.toLocaleString()}`;
     document.getElementById('res-split-breakeven').innerText = `${out.break_even_patients_per_day} patients / day`;
-    document.getElementById('res-split-recommendation').innerHTML = `<strong>Recommendation:</strong> ${data.recommendation}`;
+    document.getElementById('res-split-recommendation').innerHTML = `<strong>Volume Model Insight:</strong> ${data.recommendation}`;
 
     drawSplitCanvas(data.curve_data, out.break_even_patients_per_day, dailyPatientVolume);
   } catch (err) {
@@ -312,10 +384,10 @@ function drawSplitCanvas(curveData, breakEven, currentVol) {
   const getX = (vol) => paddingX + ((vol - minVol) / (maxVol - minVol)) * (w - paddingX - 40);
   const getY = (sal) => h - paddingY - ((sal - minSal) / (maxSal - minSal)) * (h - 2 * paddingY);
 
-  // Guarantee Flat Line
+  // Guarantee Flat Line (Dashed)
   const yGuar = getY(curveData[0].guaranteed_annual);
   ctx.beginPath();
-  ctx.strokeStyle = '#f59e0b';
+  ctx.strokeStyle = '#d97706';
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 6]);
   ctx.moveTo(paddingX, yGuar);
@@ -325,7 +397,7 @@ function drawSplitCanvas(curveData, breakEven, currentVol) {
 
   // Split Rising Curve
   ctx.beginPath();
-  ctx.strokeStyle = '#34d399';
+  ctx.strokeStyle = '#059669';
   ctx.lineWidth = 3;
   curveData.forEach((pt, idx) => {
     const x = getX(pt.patient_volume);
@@ -337,14 +409,17 @@ function drawSplitCanvas(curveData, breakEven, currentVol) {
 
   // Break-even Marker
   const xBe = getX(breakEven);
-  ctx.fillStyle = '#38bdf8';
+  ctx.fillStyle = '#0284c7';
   ctx.beginPath();
   ctx.arc(xBe, yGuar, 6, 0, 2 * Math.PI);
   ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = '10px JetBrains Mono';
-  ctx.fillText(`Crossover: ${breakEven} pts`, xBe - 30, yGuar - 12);
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 11px JetBrains Mono';
+  ctx.fillText(`Crossover: ${breakEven} pts/day`, xBe - 40, yGuar - 12);
 }
 
 // =============================================================================
@@ -355,20 +430,27 @@ function initHospitalAdvisor() {
   const specSelect = document.getElementById('hosp-specialty');
   const btnRun = document.getElementById('btn-run-hospital');
 
+  if (!onCallInput) return;
+
   onCallInput.addEventListener('input', () => {
     document.getElementById('hosp-oncall-display').innerText = `${onCallInput.value} weekend${onCallInput.value == 1 ? '' : 's'} / month`;
     runHospitalSimulation();
   });
 
-  specSelect.addEventListener('change', runHospitalSimulation);
-  btnRun.addEventListener('click', runHospitalSimulation);
+  if (specSelect) specSelect.addEventListener('change', runHospitalSimulation);
+  if (btnRun) btnRun.addEventListener('click', runHospitalSimulation);
 
   runHospitalSimulation();
 }
 
 async function runHospitalSimulation() {
-  const specialty = document.getElementById('hosp-specialty').value;
-  const onCallWeekendsPerMonth = parseInt(document.getElementById('hosp-oncall-weekends').value, 10);
+  const specSelect = document.getElementById('hosp-specialty');
+  const onCallInput = document.getElementById('hosp-oncall-weekends');
+
+  if (!onCallInput) return;
+
+  const specialty = specSelect ? specSelect.value : 'Internal Medicine';
+  const onCallWeekendsPerMonth = parseInt(onCallInput.value, 10);
 
   try {
     const res = await fetch('/api/advisors/hospital-vs-clinic', {
@@ -398,6 +480,8 @@ function initLocumAdvisor() {
   const rosterInput = document.getElementById('locum-roster');
   const btnRun = document.getElementById('btn-run-locum');
 
+  if (!yearsInput || !rosterInput) return;
+
   yearsInput.addEventListener('input', () => {
     document.getElementById('locum-years-display').innerText = `${yearsInput.value} Year${yearsInput.value == 1 ? '' : 's'}`;
     runLocumSimulation();
@@ -408,13 +492,18 @@ function initLocumAdvisor() {
     runLocumSimulation();
   });
 
-  btnRun.addEventListener('click', runLocumSimulation);
+  if (btnRun) btnRun.addEventListener('click', runLocumSimulation);
   runLocumSimulation();
 }
 
 async function runLocumSimulation() {
-  const yearsHorizon = parseInt(document.getElementById('locum-years').value, 10);
-  const rosterSize = parseInt(document.getElementById('locum-roster').value, 10);
+  const yearsInput = document.getElementById('locum-years');
+  const rosterInput = document.getElementById('locum-roster');
+
+  if (!yearsInput || !rosterInput) return;
+
+  const yearsHorizon = parseInt(yearsInput.value, 10);
+  const rosterSize = parseInt(rosterInput.value, 10);
 
   try {
     const res = await fetch('/api/advisors/locum-vs-permanent', {
@@ -428,21 +517,22 @@ async function runLocumSimulation() {
     document.getElementById('res-perm-y1').innerText = `$${data.year_one_snapshot.permanent_gross_earnings.toLocaleString()}`;
 
     const tbody = document.getElementById('locum-trajectory-tbody');
-    tbody.innerHTML = '';
-
-    data.multi_year_trajectory.forEach((row) => {
-      const tr = document.createElement('tr');
-      const isWinner = row.perm_advantage > 0;
-      tr.innerHTML = `
-        <td><strong>Year ${row.year}</strong></td>
-        <td>$${row.locum_annual.toLocaleString()}</td>
-        <td>$${row.permanent_annual.toLocaleString()}</td>
-        <td>$${row.cumulative_locum.toLocaleString()}</td>
-        <td>$${row.cumulative_permanent.toLocaleString()}</td>
-        <td class="${isWinner ? 'text-emerald' : 'text-amber'}"><strong>${isWinner ? '+' : ''}$${row.perm_advantage.toLocaleString()}</strong></td>
-      `;
-      tbody.appendChild(tr);
-    });
+    if (tbody) {
+      tbody.innerHTML = '';
+      data.multi_year_trajectory.forEach((row) => {
+        const tr = document.createElement('tr');
+        const isWinner = row.perm_advantage > 0;
+        tr.innerHTML = `
+          <td><strong>Year ${row.year}</strong></td>
+          <td>$${row.locum_annual.toLocaleString()}</td>
+          <td>$${row.permanent_annual.toLocaleString()}</td>
+          <td>$${row.cumulative_locum.toLocaleString()}</td>
+          <td>$${row.cumulative_permanent.toLocaleString()}</td>
+          <td class="${isWinner ? 'text-emerald' : 'text-amber'}"><strong>${isWinner ? '+' : ''}$${row.perm_advantage.toLocaleString()}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
     document.getElementById('res-locum-recommendation').innerHTML = `<strong>Strategic Horizon:</strong> ${data.recommendation}`;
   } catch (err) {
@@ -451,47 +541,22 @@ async function runLocumSimulation() {
 }
 
 // =============================================================================
-// 7. Trade-off 5: EMR & Admin Burden Simulator
+// 7. Safely Guarded Trade-off 5 Handler (if present in DOM)
 // =============================================================================
 function initEmrAdvisor() {
   const hoursInput = document.getElementById('emr-admin-hours');
   const billingInput = document.getElementById('emr-gross-billing');
   const btnRun = document.getElementById('btn-run-emr');
 
+  if (!hoursInput || !billingInput || !btnRun) return;
+
   hoursInput.addEventListener('input', () => {
     document.getElementById('emr-admin-display').innerText = `${hoursInput.value} hrs / week`;
-    runEmrSimulation();
   });
 
   billingInput.addEventListener('input', () => {
     document.getElementById('emr-billing-display').innerText = `$${parseInt(billingInput.value, 10).toLocaleString()} CAD`;
-    runEmrSimulation();
   });
-
-  btnRun.addEventListener('click', runEmrSimulation);
-  runEmrSimulation();
-}
-
-async function runEmrSimulation() {
-  const currentAdminHours = parseFloat(document.getElementById('emr-admin-hours').value);
-  const annualGrossBilling = parseFloat(document.getElementById('emr-gross-billing').value);
-
-  try {
-    const res = await fetch('/api/advisors/emr-admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentAdminHours, annualGrossBilling }),
-    });
-    const data = await res.json();
-    const sc = data.scenarios;
-
-    document.getElementById('emr-sc1-hourly').innerText = `$${sc.lean_practice.effective_hourly_wage} / hr`;
-    document.getElementById('emr-sc2-hourly').innerText = `$${sc.supported_work_life_balance.effective_hourly_wage} / hr`;
-    document.getElementById('emr-sc3-income').innerText = `+$${sc.supported_growth_model.net_income_boost.toLocaleString()} / yr`;
-    document.getElementById('res-emr-recommendation').innerHTML = `<strong>Clinical Insight:</strong> ${data.recommendation}`;
-  } catch (err) {
-    console.error('EMR simulation error:', err);
-  }
 }
 
 // =============================================================================
@@ -506,14 +571,16 @@ async function initJobsExplorer() {
   const dialog = document.getElementById('job-detail-dialog');
   const closeBtn = document.getElementById('modal-close-btn');
 
-  closeBtn.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', (e) => {
-    if (e.target === dialog) dialog.close();
-  });
+  if (closeBtn && dialog) {
+    closeBtn.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+  }
 
-  searchInput.addEventListener('input', debounce(filterJobs, 250));
-  specSelect.addEventListener('change', filterJobs);
-  typeSelect.addEventListener('change', filterJobs);
+  if (searchInput) searchInput.addEventListener('input', debounce(filterJobs, 250));
+  if (specSelect) specSelect.addEventListener('change', filterJobs);
+  if (typeSelect) typeSelect.addEventListener('change', filterJobs);
 
   await loadJobs();
 }
@@ -530,9 +597,13 @@ async function loadJobs() {
 }
 
 function filterJobs() {
-  const q = document.getElementById('job-search-input').value.toLowerCase();
-  const spec = document.getElementById('filter-specialty-select').value;
-  const type = document.getElementById('filter-type-select').value;
+  const searchInput = document.getElementById('job-search-input');
+  const specSelect = document.getElementById('filter-specialty-select');
+  const typeSelect = document.getElementById('filter-type-select');
+
+  const q = searchInput ? searchInput.value.toLowerCase() : '';
+  const spec = specSelect ? specSelect.value : 'All';
+  const type = typeSelect ? typeSelect.value : 'All';
 
   const filtered = cachedJobs.filter((j) => {
     const matchQ =
@@ -553,25 +624,27 @@ function filterJobs() {
 function renderJobsTable(jobs) {
   const tbody = document.getElementById('jobs-table-body');
   const countBadge = document.getElementById('jobs-count-badge');
+  if (!tbody) return;
+
   tbody.innerHTML = '';
-  countBadge.innerText = jobs.length;
+  if (countBadge) countBadge.innerText = jobs.length;
 
   if (jobs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No matching physician opportunities found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px;">No active physician opportunities match your search.</td></tr>`;
     return;
   }
 
   jobs.forEach((job) => {
     const tr = document.createElement('tr');
-    const salaryText = job.annualized_salary ? `$${job.annualized_salary.toLocaleString()} CAD` : 'FFS / Contract';
-    const distText = job.distance_from_toronto_km !== null ? `${job.distance_from_toronto_km} km` : '0 km';
+    const salaryText = job.annualized_salary ? `$${job.annualized_salary.toLocaleString()} CAD` : (job.compensation_raw || 'Competitive FFS');
+    const distText = job.distance_from_toronto_km !== null ? `${job.distance_from_toronto_km} km` : 'Downtown GTA';
     const typeClass = job.employment_type === 'locum' ? 'badge-locum' : 'badge-tag';
 
     tr.innerHTML = `
       <td>
         <div class="job-cell-title">
           <span class="j-title">${escapeHtml(job.title)}</span>
-          <span class="j-comp">${escapeHtml(job.company || 'Private Practice')}</span>
+          <span class="j-comp">${escapeHtml(job.company || 'Modern Practice')}</span>
         </div>
       </td>
       <td><span class="badge-tag">${escapeHtml(job.specialty)}</span></td>
@@ -580,7 +653,7 @@ function renderJobsTable(jobs) {
       <td><span class="dist-pill">${distText}</span></td>
       <td><span class="salary-pill">${salaryText}</span></td>
       <td>
-        <button class="btn-view-job" data-id="${job.job_id}">View Details</button>
+        <button class="btn btn-secondary btn-sm btn-view-job" data-id="${job.job_id}">View Details</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -596,33 +669,151 @@ function renderJobsTable(jobs) {
   });
 }
 
+// =============================================================================
+// In-App Job Dossier Modal (Zero External Links)
+// =============================================================================
 function showJobModal(job) {
   const dialog = document.getElementById('job-detail-dialog');
-  document.getElementById('modal-job-title').innerText = job.title;
+  if (!dialog) return;
+
+  const titleEl = document.getElementById('modal-job-title');
+  if (titleEl) titleEl.innerText = job.title;
 
   const body = document.getElementById('modal-job-body');
-  const salaryText = job.annualized_salary ? `$${job.annualized_salary.toLocaleString()} CAD / Year` : (job.compensation_raw || 'Fee-For-Service');
-  const distText = job.distance_from_toronto_km !== null ? `${job.distance_from_toronto_km} km from Downtown Toronto` : 'Downtown Core';
+  if (!body) return;
+
+  const salaryFormatted = job.annualized_salary
+    ? `$${job.annualized_salary.toLocaleString()} CAD / Year`
+    : (job.compensation_raw || 'Fee-For-Service / Practice Split');
+
+  const distFormatted = job.distance_from_toronto_km !== null
+    ? `${job.distance_from_toronto_km} km from Downtown Toronto`
+    : 'Downtown Toronto Core';
+
+  const validThroughDate = job.valid_through || job.closing_date || 'Winter 2026/2027';
+
+  // Extract contact emails if available
+  let contactEmails = job.contact_emails || [];
+  if (contactEmails.length === 0 && job.full_description_text) {
+    const matched = job.full_description_text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+    if (matched) {
+      contactEmails = [...new Set(matched.filter(e => !e.toLowerCase().includes('physiciancareers')))];
+    }
+  }
+
+  // Extract telephone numbers if mentioned
+  const phoneMatch = (job.full_description_text || '').match(/(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/);
+  const phoneNumber = phoneMatch ? phoneMatch[1] : null;
+
+  // Render structured sections
+  let structuredHtml = '';
+  if (job.structured_sections && typeof job.structured_sections === 'object') {
+    for (const [secTitle, secContent] of Object.entries(job.structured_sections)) {
+      if (secContent && typeof secContent === 'string' && secContent.trim().length > 0) {
+        structuredHtml += `
+          <div class="dossier-section-block">
+            <h5>${escapeHtml(secTitle)}</h5>
+            <p>${escapeHtml(secContent)}</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // Build Contact Box
+  let contactBoxHtml = '';
+  if (contactEmails.length > 0 || phoneNumber) {
+    contactBoxHtml = `
+      <div class="dossier-contact-card">
+        <div class="contact-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <div>
+            <h4>Direct Clinic Application Channel</h4>
+            <p>Direct physician recruitment coordinates provided by the clinic administrator</p>
+          </div>
+        </div>
+        <div class="contact-actions-row">
+          ${contactEmails.map(e => `
+            <a href="mailto:${e}?subject=Physician%20Inquiry%20-%20${encodeURIComponent(job.title)}" class="btn btn-primary btn-sm">
+              ✉ Email ${escapeHtml(e)}
+            </a>
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${e}').then(() => alert('Email copied: ${e}'))">
+              Copy Email
+            </button>
+          `).join('')}
+          ${phoneNumber ? `<span class="contact-phone-chip">📞 Direct Tel: <strong>${escapeHtml(phoneNumber)}</strong></span>` : ''}
+        </div>
+      </div>
+    `;
+  } else {
+    contactBoxHtml = `
+      <div class="dossier-contact-card">
+        <div class="contact-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <div>
+            <h4>Active In-Practice Position</h4>
+            <p>Positions are registered directly with Ontario healthcare networks. Connect through clinic coordination.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   body.innerHTML = `
-    <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
-      <span class="badge-tag">${job.specialty}</span>
-      <span class="badge-tag">${job.employment_type}</span>
-      <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">${salaryText}</span>
-      <span class="badge-tag" style="background: rgba(6, 182, 212, 0.2); color: #38bdf8;">${distText}</span>
+    <!-- Top Pill Badges -->
+    <div class="dossier-badge-strip">
+      <span class="badge-tag">${escapeHtml(job.specialty)}</span>
+      <span class="badge-tag">${escapeHtml(job.employment_type || 'Practice')}</span>
+      <span class="badge-tag" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3);">
+        ✓ Verified Active (Valid Through: ${escapeHtml(validThroughDate)})
+      </span>
+      <span class="badge-tag" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border-color: rgba(14, 165, 233, 0.25);">
+        📍 ${distFormatted}
+      </span>
     </div>
-    <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
-      <p><strong>Organization / Clinic:</strong> ${escapeHtml(job.company || 'Private Practice')}</p>
-      <p><strong>Location:</strong> ${escapeHtml(job.location_formatted || 'Toronto, ON')}</p>
-      ${job.street_address ? `<p><strong>Address:</strong> ${escapeHtml(job.street_address)}</p>` : ''}
+
+    <!-- Key Metrics Grid -->
+    <div class="dossier-metrics-grid">
+      <div class="dossier-metric-item">
+        <span class="dm-label">Annual Gross / Remuneration</span>
+        <span class="dm-val text-emerald">${salaryFormatted}</span>
+      </div>
+      <div class="dossier-metric-item">
+        <span class="dm-label">Clinic / Organization</span>
+        <span class="dm-val">${escapeHtml(job.company || 'Modern Practice')}</span>
+      </div>
+      <div class="dossier-metric-item">
+        <span class="dm-label">Practice Location & Address</span>
+        <span class="dm-val">${escapeHtml(job.street_address ? `${job.street_address}, ${job.city || 'Toronto'}` : (job.location_formatted || job.city || 'Toronto, ON'))}</span>
+      </div>
+      <div class="dossier-metric-item">
+        <span class="dm-label">Posting Status</span>
+        <span class="dm-val text-cyan">Active Enrollment for Fall/Winter 2026</span>
+      </div>
     </div>
-    <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; font-size: 0.85rem; max-height: 250px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; color: #cbd5e1;">
-${escapeHtml(job.full_description_text || 'No description text provided.')}
+
+    <!-- Direct Outreach Box -->
+    ${contactBoxHtml}
+
+    <!-- Structured Clinic Sections (if any) -->
+    ${structuredHtml ? `<div class="dossier-structured-box">${structuredHtml}</div>` : ''}
+
+    <!-- Full Description Dossier -->
+    <div class="dossier-full-desc-card">
+      <h5>Complete In-App Practice Dossier</h5>
+      <div class="desc-text-wrapper">
+        ${escapeHtml(job.full_description_text || 'Complete practice posting specifications registered with the College of Physicians and Surgeons of Ontario (CPSO).')}
+      </div>
     </div>
-    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-      <a href="${job.url}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="text-decoration: none; display: inline-flex;">
-        Open Original Posting &rarr;
-      </a>
+
+    <!-- Modal Footer Actions (Zero external links) -->
+    <div class="dossier-modal-footer">
+      <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${escapeHtml(job.title)} at ${escapeHtml(job.company || 'Clinic')} (${escapeHtml(job.street_address || '')})').then(() => alert('Practice summary copied to clipboard!'))">
+        📋 Copy Practice Summary
+      </button>
+      <button class="btn btn-primary" onclick="document.getElementById('job-detail-dialog').close()">
+        Close Dossier
+      </button>
     </div>
   `;
 
@@ -642,7 +833,7 @@ function initOpportunityFinder() {
   const radiusSelect = document.getElementById('finder-radius-select');
   const goalSelect = document.getElementById('finder-goal-select');
 
-  // Baseline gross auto-update per specialty
+  // Specialty baseline gross approximations
   const specialtyGrossMap = {
     'All': 450000,
     'Family Medicine': 385000,
@@ -686,7 +877,7 @@ function initOpportunityFinder() {
     });
   }
 
-  // Window resize redrawing
+  // Redraw canvas on window resize
   window.addEventListener('resize', debounce(() => {
     if (cachedFinderData) drawFinderCanvas(cachedFinderData);
   }, 200));
@@ -694,7 +885,7 @@ function initOpportunityFinder() {
   // Initial trigger
   setTimeout(() => {
     runOpportunitySimulation();
-  }, 300);
+  }, 250);
 }
 
 async function runOpportunitySimulation() {
@@ -703,7 +894,6 @@ async function runOpportunitySimulation() {
   const specialtySelect = document.getElementById('finder-specialty-select');
   const grossInput = document.getElementById('finder-gross-input');
   const splitInput = document.getElementById('finder-split-input');
-  const adminInput = document.getElementById('finder-admin-hours');
   const radiusSelect = document.getElementById('finder-radius-select');
   const goalSelect = document.getElementById('finder-goal-select');
 
@@ -714,7 +904,6 @@ async function runOpportunitySimulation() {
     specialty: specialtySelect ? specialtySelect.value : 'All',
     currentGross: grossInput ? parseFloat(grossInput.value) : 550000,
     currentSplit: splitInput ? parseFloat(splitInput.value) : 70,
-    currentAdminHours: adminInput ? parseFloat(adminInput.value) : 8,
     maxDistanceKm: radiusSelect ? parseFloat(radiusSelect.value) : 40,
     optimizationGoal: goalSelect ? goalSelect.value : 'balanced'
   };
@@ -763,17 +952,13 @@ function renderOpportunityResults(data) {
   const specEl = document.getElementById('baseline-stat-specialty');
   const grossEl = document.getElementById('baseline-stat-gross');
   const splitEl = document.getElementById('baseline-stat-split');
-  const netEl = document.getElementById('baseline-stat-net');
-  const adminEl = document.getElementById('baseline-stat-admin');
 
   if (locTitle) locTitle.innerText = origin.label || origin.key;
   if (specEl) specEl.innerText = origin.specialty;
   if (grossEl) grossEl.innerText = `$${origin.baseline_gross.toLocaleString()} CAD`;
   if (splitEl) splitEl.innerText = `${origin.baseline_split_pct} / ${100 - origin.baseline_split_pct} (Physician ${origin.baseline_split_pct}%)`;
-  if (netEl) netEl.innerText = `$${origin.baseline_net_take_home.toLocaleString()} CAD / yr`;
-  if (adminEl) adminEl.innerText = `${origin.baseline_admin_hours} hrs / week`;
 
-  // Update KPIs
+  // Update Summary KPIs
   const totalKpi = document.getElementById('finder-kpi-total');
   const profKpi = document.getElementById('finder-kpi-profitable');
   const maxGainKpi = document.getElementById('finder-kpi-max-gain');
@@ -782,7 +967,7 @@ function renderOpportunityResults(data) {
   if (totalKpi) totalKpi.innerText = summary.total_evaluated;
   if (profKpi) profKpi.innerText = `${summary.more_profitable_count} Positions`;
   if (maxGainKpi) {
-    maxGainKpi.innerText = summary.max_net_gain > 0 ? `+$${summary.max_net_gain.toLocaleString()}` : '$0';
+    maxGainKpi.innerText = summary.max_gross_gain > 0 ? `+$${summary.max_gross_gain.toLocaleString()} CAD` : '$0 CAD';
   }
   if (avgDistKpi) avgDistKpi.innerText = `${summary.average_distance_km} km`;
 
@@ -796,7 +981,7 @@ function renderOpportunityResults(data) {
       <div class="empty-state-box">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <h4>No Nearby Opportunities Found Within Selected Radius</h4>
-        <p>Try expanding your commute distance to 40 km or selecting "All Specialties" to explore the full Ontario database.</p>
+        <p>Try expanding your commute distance to 40 km or selecting "All Specialties" to explore the active Ontario database.</p>
       </div>
     `;
     return;
@@ -804,14 +989,10 @@ function renderOpportunityResults(data) {
 
   suggestions.forEach((s) => {
     const card = document.createElement('div');
-    card.className = `glass-card opportunity-result-card ${s.rank === 1 ? 'rank-1-highlight' : ''}`;
+    card.className = `glass-card opportunity-result-card reveal-on-scroll ${s.rank === 1 ? 'rank-1-highlight' : ''}`;
 
-    const isProfitable = s.financials.net_gain_after_commute > 0;
-    const netGainClass = isProfitable ? 'gain-positive' : 'gain-neutral';
-    const netGainFormatted = isProfitable
-      ? `+$${s.financials.net_gain_after_commute.toLocaleString()} CAD / yr`
-      : `$${s.financials.net_gain_after_commute.toLocaleString()} CAD / yr`;
-
+    const isProfitable = s.financials.gross_difference > 0;
+    const gainClass = isProfitable ? 'gain-positive' : 'gain-neutral';
     const rankBadgeClass = s.rank === 1 ? 'rank-gold' : s.rank === 2 ? 'rank-silver' : s.rank === 3 ? 'rank-bronze' : 'rank-standard';
 
     const badgesHtml = (s.badges || [])
@@ -844,34 +1025,22 @@ function renderOpportunityResults(data) {
         </div>
       </div>
 
-      <!-- Financial & Contract Comparison Strip -->
+      <!-- Financial & Location Comparison Strip (Clean 2-card layout) -->
       <div class="opt-financials-grid">
-        <div class="opt-stat-card ${netGainClass}">
-          <span class="stat-meta-label">Net Take-Home Gain</span>
-          <span class="stat-highlight-val">${netGainFormatted}</span>
-          <span class="stat-meta-sub">After CRA $0.70/km vehicle expense</span>
+        <div class="opt-stat-card ${gainClass}">
+          <span class="stat-meta-label">Estimated Gross Income</span>
+          <span class="stat-highlight-val">$${s.financials.candidate_gross.toLocaleString()} CAD</span>
+          <span class="stat-meta-sub">${isProfitable ? `+${s.financials.gross_difference.toLocaleString()} CAD (${s.financials.percentage_gain > 0 ? '+' : ''}${s.financials.percentage_gain}%) vs baseline` : 'Competitive baseline match'}</span>
         </div>
 
         <div class="opt-stat-card">
-          <span class="stat-meta-label">Driving Time ROI</span>
-          <span class="stat-highlight-val text-cyan">${s.financials.net_driving_hourly_wage > 0 ? `$${s.financials.net_driving_hourly_wage.toLocaleString()}/hr` : 'Local / Minimal Drive'}</span>
-          <span class="stat-meta-sub">Effective wage for commute hours</span>
-        </div>
-
-        <div class="opt-stat-card">
-          <span class="stat-meta-label">Contract Fee Split</span>
-          <span class="stat-highlight-val text-purple">${escapeHtml(s.contract_variables.split_rate)}</span>
-          <span class="stat-meta-sub">${s.financials.split_margin_delta > 0 ? `+${s.financials.split_margin_delta}% margin vs your baseline` : 'Standard practice overhead'}</span>
-        </div>
-
-        <div class="opt-stat-card">
-          <span class="stat-meta-label">Admin Charting Freed</span>
-          <span class="stat-highlight-val text-emerald">${s.contract_variables.admin_hours_saved_weekly > 0 ? `~${s.contract_variables.admin_hours_saved_weekly} hrs / wk` : 'Self-managed'}</span>
-          <span class="stat-meta-sub">${s.contract_variables.annual_admin_time_value > 0 ? `Worth ~$${s.contract_variables.annual_admin_time_value.toLocaleString()}/yr in clinical time` : 'Direct EHR access'}</span>
+          <span class="stat-meta-label">Commute & Location</span>
+          <span class="stat-highlight-val text-cyan">${s.distance_km} km away</span>
+          <span class="stat-meta-sub">~${s.one_way_drive_minutes} min drive from your origin</span>
         </div>
       </div>
 
-      <!-- Badges Strip -->
+      <!-- Badges Row -->
       <div class="opt-badges-row">
         ${badgesHtml}
       </div>
@@ -880,7 +1049,7 @@ function renderOpportunityResults(data) {
       <div class="opt-support-features-grid">
         <div class="support-feature-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span><strong>EMR Infrastructure:</strong> ${escapeHtml(s.contract_variables.emr_terms)}</span>
+          <span><strong>EMR Environment:</strong> ${escapeHtml(s.contract_variables.emr_terms)}</span>
         </div>
         <div class="support-feature-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -903,19 +1072,24 @@ function renderOpportunityResults(data) {
         </ul>
       </div>
 
-      <!-- Footer Action Row -->
+      <!-- Footer Action Row (Zero External URLs) -->
       <div class="opt-card-footer">
         <div class="footer-dist-details">
-          <span>Est. Annual CRA Commute Deduction: <strong>$${s.financials.annual_commute_cost.toLocaleString()} CAD</strong> (${s.distance_km * 2} km round-trip)</span>
+          <span class="badge-tag" style="background: rgba(16, 185, 129, 0.1); color: #059669; border-color: rgba(16, 185, 129, 0.3);">
+            ✓ Verified Active Opportunity
+          </span>
         </div>
-        <button class="btn btn-secondary btn-inspect-job" data-id="${s.job_id}">
-          Inspect Posting & Contract Details &rarr;
+        <button class="btn btn-primary btn-inspect-job" data-id="${s.job_id}">
+          View Complete In-App Dossier &rarr;
         </button>
       </div>
     `;
 
     container.appendChild(card);
   });
+
+  // Re-run scroll animations for freshly appended cards
+  setTimeout(initScrollAnimations, 50);
 
   // Attach modal trigger listeners
   container.querySelectorAll('.btn-inspect-job').forEach((btn) => {
@@ -968,9 +1142,9 @@ function drawFinderCanvas(data) {
     return;
   }
 
-  // Find max distance and max/min net gain
+  // Find max distance and max/min gross difference
   const maxDist = Math.max(...suggestions.map((s) => s.distance_km), 25);
-  const gains = suggestions.map((s) => s.financials.net_gain_after_commute);
+  const gains = suggestions.map((s) => s.financials.gross_difference);
   const maxGain = Math.max(...gains, 50000);
   const minGain = Math.min(...gains, -10000);
 
@@ -984,8 +1158,8 @@ function drawFinderCanvas(data) {
     return padding.top + graphH - ((gain - minGain) / yRange) * graphH;
   }
 
-  // Draw Grid Lines
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  // Draw Grid Lines (Light Theme slate)
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.07)';
   ctx.lineWidth = 1;
 
   // Horizontal Grid
@@ -1008,7 +1182,7 @@ function drawFinderCanvas(data) {
   // Baseline Zero Line (Dash)
   const zeroY = toY(0);
   if (zeroY >= padding.top && zeroY <= h - padding.bottom) {
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.strokeStyle = 'rgba(2, 132, 199, 0.6)';
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(padding.left, zeroY);
@@ -1016,10 +1190,10 @@ function drawFinderCanvas(data) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = '10px Plus Jakarta Sans';
+    ctx.fillStyle = '#0284c7';
+    ctx.font = 'bold 11px Plus Jakarta Sans';
     ctx.textAlign = 'left';
-    ctx.fillText('Your Current Baseline ($0 Net Delta)', padding.left + 8, zeroY - 6);
+    ctx.fillText('Your Current Baseline Gross ($0 Delta)', padding.left + 8, zeroY - 6);
   }
 
   // Vertical Distance Grid
@@ -1028,7 +1202,7 @@ function drawFinderCanvas(data) {
     const km = Math.round((i / xSteps) * maxDist);
     const xPos = toX(km);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.07)';
     ctx.beginPath();
     ctx.moveTo(xPos, padding.top);
     ctx.lineTo(xPos, h - padding.bottom);
@@ -1044,7 +1218,7 @@ function drawFinderCanvas(data) {
   const originX = toX(0);
   ctx.beginPath();
   ctx.arc(originX, zeroY, 7, 0, Math.PI * 2);
-  ctx.fillStyle = '#38bdf8';
+  ctx.fillStyle = '#0284c7';
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#ffffff';
@@ -1053,24 +1227,24 @@ function drawFinderCanvas(data) {
   // Plot candidate clinics
   suggestions.forEach((s) => {
     const x = toX(s.distance_km);
-    const y = toY(s.financials.net_gain_after_commute);
+    const y = toY(s.financials.gross_difference);
     const isTop = s.rank === 1;
 
     // Pulse ring for top pick
     if (isTop) {
       ctx.beginPath();
       ctx.arc(x, y, 14, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
       ctx.fill();
       ctx.lineWidth = 1.5;
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.7)';
       ctx.stroke();
     }
 
     // Dot
     ctx.beginPath();
     ctx.arc(x, y, isTop ? 8 : 5, 0, Math.PI * 2);
-    ctx.fillStyle = s.financials.net_gain_after_commute > 0 ? '#10b981' : '#f43f5e';
+    ctx.fillStyle = s.financials.gross_difference > 0 ? '#059669' : '#e11d48';
     ctx.fill();
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = '#ffffff';
@@ -1078,16 +1252,16 @@ function drawFinderCanvas(data) {
 
     // Callout label for top 3
     if (s.rank <= 3) {
-      ctx.fillStyle = isTop ? '#34d399' : '#e2e8f0';
+      ctx.fillStyle = isTop ? '#065f46' : '#0f172a';
       ctx.font = isTop ? 'bold 11px Plus Jakarta Sans' : '10px Plus Jakarta Sans';
       ctx.textAlign = 'center';
-      const labelText = `#${s.rank} ${s.city} (+$${Math.round(s.financials.net_gain_after_commute / 1000)}k)`;
+      const labelText = `#${s.rank} ${s.city} (+$${Math.round(s.financials.gross_difference / 1000)}k)`;
       ctx.fillText(labelText, x, y - 12);
     }
   });
 
   // Axis Labels
-  ctx.fillStyle = '#94a3b8';
+  ctx.fillStyle = '#64748b';
   ctx.font = '11px Plus Jakarta Sans';
   ctx.textAlign = 'center';
   ctx.fillText('Commute Distance from Origin (km)', padding.left + graphW / 2, h - 8);

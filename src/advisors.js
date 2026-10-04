@@ -79,8 +79,8 @@ function calculateDistanceTradeOff(params = {}) {
     },
     recommendation:
       salaryDelta > 40000
-        ? `Relocating or commuting ${kmDelta} km outward provides an exceptional net gain of +$${netSalaryDelta.toLocaleString()} CAD/year (earning ~$${effectiveEarningPerHourDriving}/hr for commute time). Highly favorable.`
-        : `Commuting ${kmDelta} km outward yields +$${salaryDelta.toLocaleString()} CAD gross. After vehicle wear ($${annualDrivingCost.toLocaleString()}), net gain is +$${netSalaryDelta.toLocaleString()}. Weigh personal lifestyle preference.`,
+        ? `Relocating or commuting ${kmDelta} km outward provides an exceptional gross annual advantage of +$${salaryDelta.toLocaleString()} CAD/year (+${pctDelta}%). Outward regional health centres offer higher patient volume and retention grants.`
+        : `Commuting ${kmDelta} km outward yields +$${salaryDelta.toLocaleString()} CAD gross advantage (+${pctDelta}%). Commute time is approximately ${dailyExtraMinutes} minutes each way. Weigh personal lifestyle preferences.`,
   };
 }
 
@@ -473,6 +473,7 @@ function findSmartOpportunitySuggestions(params = {}) {
   const baselineAdminHours = customAdminHours ? parseFloat(customAdminHours) : 8; // typical unpaid charting hrs/wk
 
   const validJobs = jobsPool.filter((j) => {
+    if (j.is_expired) return false;
     if (!j.latitude || !j.longitude) return false;
     if (specialty !== 'All' && j.specialty && j.specialty.toLowerCase() !== specialty.toLowerCase()) {
       return false;
@@ -527,28 +528,14 @@ function findSmartOpportunitySuggestions(params = {}) {
 
     const candidateNetAnnual = candidateNetBeforeIncentives + totalIncentives;
 
-    // 4. Commute & CRA Vehicle Economics
-    // Driving speed model: downtown congestion (~1.7 min/km) vs highway/suburban (~1.3 min/km)
+    // 4. Commute & Proximity Context (Driving time and distance only, NO vehicle deductions or driving ROI)
     const minPerKm = distanceKm > 12 ? 1.3 : 1.7;
     const oneWayDriveMinutes = Math.max(5, Math.round(distanceKm * minPerKm));
-    const roundTripKm = distanceKm * 2;
-    const annualClinicDays = 220; // 44 weeks x 5 days
-    const annualCommuteKm = roundTripKm * annualClinicDays;
-    const annualCommuteCost = Math.round(annualCommuteKm * 0.70); // CRA automobile allowance standard
-    const annualCommuteHours = Math.round((oneWayDriveMinutes * 2 * annualClinicDays) / 60);
 
-    // 5. Net Financial Deltas
+    // 5. Gross Income Deltas (Pure Gross Income Comparison)
     const grossDifference = candidateGross - baselineGross;
-    const splitMarginDelta = candidateSplit - baselineSplit; // percentage points
-    const netGainBeforeCommute = candidateNetAnnual - baselineNet;
-    const netGainAfterCommute = netGainBeforeCommute - annualCommuteCost;
-    const percentageGain = baselineNet > 0 ? parseFloat(((netGainAfterCommute / baselineNet) * 100).toFixed(1)) : 0;
-
-    // Net driving wage: extra take-home pay generated per hour spent commuting
-    const netDrivingHourlyWage =
-      annualCommuteHours > 0 && netGainAfterCommute > 0
-        ? Math.round(netGainAfterCommute / annualCommuteHours)
-        : 0;
+    const percentageGain = baselineGross > 0 ? parseFloat(((grossDifference / baselineGross) * 100).toFixed(1)) : 0;
+    const splitMarginDelta = candidateSplit - baselineSplit;
 
     // 6. Contract & Practice Support Features
     const hasZeroEmrFee = desc.toLowerCase().includes('zero emr') || desc.toLowerCase().includes('no emr fee');
@@ -564,79 +551,64 @@ function findSmartOpportunitySuggestions(params = {}) {
       desc.toLowerCase().includes('busy clinic') ||
       desc.toLowerCase().includes('4-6/hr');
 
-    // Estimated admin time saved per week (hours)
-    const adminHoursSavedWeekly = hasFullAdminStaff ? 6 : hasEmrSupport ? 3 : 0;
-    const annualAdminHoursSaved = adminHoursSavedWeekly * 44;
-    const annualAdminValue = Math.round(annualAdminHoursSaved * 180); // physician billing value of time
-
     // 7. Multi-Factor Opportunity Score (0 - 100)
     let score = 50; // base
 
-    // Profitability component (up to +30 pts)
-    if (netGainAfterCommute > 250000) score += 30;
-    else if (netGainAfterCommute > 150000) score += 25;
-    else if (netGainAfterCommute > 75000) score += 20;
-    else if (netGainAfterCommute > 25000) score += 12;
-    else if (netGainAfterCommute > 0) score += 5;
+    // Gross Earning Advantage (up to +35 pts)
+    if (grossDifference > 200000) score += 35;
+    else if (grossDifference > 100000) score += 28;
+    else if (grossDifference > 50000) score += 20;
+    else if (grossDifference > 20000) score += 12;
+    else if (grossDifference > 0) score += 5;
     else score -= 15;
 
-    // Commute efficiency / Driving ROI (up to +20 pts)
-    if (netDrivingHourlyWage >= 500) score += 20;
-    else if (netDrivingHourlyWage >= 250) score += 16;
-    else if (netDrivingHourlyWage >= 150) score += 12;
-    else if (netDrivingHourlyWage >= 75) score += 6;
+    // Proximity & Convenient Access (up to +25 pts)
+    if (distanceKm <= 5) score += 25;
+    else if (distanceKm <= 12) score += 20;
+    else if (distanceKm <= 25) score += 14;
+    else if (distanceKm <= 40) score += 8;
 
-    // Contract terms & Split (up to +20 pts)
-    if (splitMarginDelta >= 10) score += 15;
-    else if (splitMarginDelta >= 5) score += 10;
-    else if (splitMarginDelta === 0) score += 5;
+    // Practice Support & Structure (up to +20 pts)
+    if (hasFullAdminStaff) score += 10;
+    if (hasZeroEmrFee) score += 5;
+    if (hasHighVolume) score += 5;
     if (signingBonus > 0 || accommodationsAllowance > 0) score += 5;
-
-    // Admin & Practice Support (up to +15 pts)
-    if (hasFullAdminStaff) score += 8;
-    if (hasZeroEmrFee) score += 4;
-    if (hasHighVolume) score += 3;
 
     score = Math.max(10, Math.min(99, Math.round(score)));
 
-    // Badges & AI Rationale Generation
+    // Badges & Rationale Generation (Zero Driving ROI, Zero Commute Deductions)
     const badges = [];
-    if (netGainAfterCommute > 150000) badges.push('🚀 High Net Profit');
-    if (netDrivingHourlyWage >= 250) badges.push(`⚡ $${netDrivingHourlyWage}/hr Drive ROI`);
-    if (splitMarginDelta > 0) badges.push(`💼 +${splitMarginDelta}% Split Margin`);
-    if (hasZeroEmrFee) badges.push('🛡️ Zero EMR Overhead');
-    if (hasFullAdminStaff) badges.push('✨ Full MOA Support');
+    if (grossDifference > 100000) badges.push('🚀 High Gross Advantage');
+    if (distanceKm <= 8) badges.push('📍 Close Proximity');
     if (hasHighVolume) badges.push('📈 Guaranteed Patient Flow');
-    if (distanceKm <= 10) badges.push('📍 Close Proximity');
+    if (hasFullAdminStaff) badges.push('✨ Full MOA Support');
+    if (hasZeroEmrFee) badges.push('🛡️ Zero EMR Overhead');
+    if (signingBonus > 0) badges.push('💰 Signing Incentive');
 
     const aiRationale = [];
-    if (netGainAfterCommute > 0) {
+    if (grossDifference > 0) {
       aiRationale.push(
-        `Generates an estimated +$${Math.round(netGainAfterCommute).toLocaleString()} CAD extra take-home pay annually after deducting $${annualCommuteCost.toLocaleString()} in CRA vehicle depreciation.`
+        `Generates an estimated $${Math.round(candidateGross).toLocaleString()} CAD gross annual income (+$${Math.round(grossDifference).toLocaleString()} CAD gross advantage over your baseline).`
       );
     } else {
       aiRationale.push(
-        `Net take-home is comparable to your baseline, but offers unique contract support advantages.`
+        `Competitive gross annual income of $${Math.round(candidateGross).toLocaleString()} CAD with established patient roster.`
       );
     }
 
-    if (splitMarginDelta > 0) {
-      aiRationale.push(
-        `Retains ${candidateSplit}% of your clinical billings compared to your current ${baselineSplit}% split (+${splitMarginDelta}% extra margin on every patient encounter).`
-      );
-    } else if (candidateSplit >= 80) {
-      aiRationale.push(`Top-tier ${candidateSplit}/20 fee split with transparent clinic overhead structure.`);
-    }
-
-    if (netDrivingHourlyWage > 0) {
-      aiRationale.push(
-        `The ${distanceKm} km commute (${oneWayDriveMinutes} mins) pays an effective driving wage of $${netDrivingHourlyWage}/hr for your time behind the wheel.`
-      );
-    }
+    aiRationale.push(
+      `Located in ${job.city || 'Toronto'} (${distanceKm} km, ~${oneWayDriveMinutes} mins commute from ${loc.label || loc.key}).`
+    );
 
     if (hasFullAdminStaff) {
       aiRationale.push(
-        `Full administrative & MOA staffing frees up an estimated ~${adminHoursSavedWeekly} hours/week of unpaid charting drudgery (worth ~$${annualAdminValue.toLocaleString()}/yr).`
+        `Full administrative & MOA staffing handles clerical tasks, charting coordination, and appointment scheduling.`
+      );
+    }
+
+    if (hasHighVolume) {
+      aiRationale.push(
+        `Guaranteed patient volume with active clinic roster ensuring immediate clinical utilization.`
       );
     }
 
@@ -653,41 +625,28 @@ function findSmartOpportunitySuggestions(params = {}) {
       badges: badges.slice(0, 4),
       financials: {
         candidate_gross: Math.round(candidateGross),
-        candidate_split_pct: candidateSplit,
-        candidate_net_annual: Math.round(candidateNetAnnual),
         gross_difference: Math.round(grossDifference),
-        split_margin_delta: splitMarginDelta,
-        net_gain_before_commute: Math.round(netGainBeforeCommute),
-        annual_commute_cost: annualCommuteCost,
-        annual_commute_hours: annualCommuteHours,
-        net_gain_after_commute: Math.round(netGainAfterCommute),
         percentage_gain: percentageGain,
-        net_driving_hourly_wage: netDrivingHourlyWage,
+        candidate_split_pct: candidateSplit,
         signing_bonus: signingBonus,
-        accommodations_allowance: accommodationsAllowance
+        accommodations_allowance: accommodationsAllowance,
       },
       contract_variables: {
         split_rate: `${candidateSplit}/${100 - candidateSplit}`,
         billing_type: candidateSplit === 100 ? 'Salaried / Alternative Payment Plan' : 'Fee-For-Service Split',
         emr_terms: hasZeroEmrFee ? 'Zero EMR Software Fees (Clinic Covered)' : hasEmrSupport ? 'Telus / PS Suite (Integrated)' : 'Standard EMR',
         admin_support: hasFullAdminStaff ? 'Dedicated MOA & Nursing Staff' : 'Standard Shared Clinic Reception',
-        admin_hours_saved_weekly: adminHoursSavedWeekly,
-        annual_admin_time_value: annualAdminValue,
-        patient_volume_status: hasHighVolume ? 'Guaranteed 4-6 pts/hr with active waitlist' : 'Steady community walk-in & referral flow'
+        patient_volume_status: hasHighVolume ? 'Guaranteed 4-6 pts/hr with active waitlist' : 'Steady community walk-in & referral flow',
       },
-      ai_rationale: aiRationale
+      ai_rationale: aiRationale,
     });
   }
 
   // Sort by user's optimization goal
-  if (optimizationGoal === 'net_profit') {
-    suggestions.sort((a, b) => b.financials.net_gain_after_commute - a.financials.net_gain_after_commute);
-  } else if (optimizationGoal === 'commute_roi') {
-    suggestions.sort((a, b) => b.financials.net_driving_hourly_wage - a.financials.net_driving_hourly_wage);
-  } else if (optimizationGoal === 'split_margin') {
-    suggestions.sort((a, b) => b.financials.candidate_split_pct - a.financials.candidate_split_pct || b.financials.net_gain_after_commute - a.financials.net_gain_after_commute);
-  } else if (optimizationGoal === 'admin_balance') {
-    suggestions.sort((a, b) => b.contract_variables.admin_hours_saved_weekly - a.contract_variables.admin_hours_saved_weekly || b.financials.net_gain_after_commute - a.financials.net_gain_after_commute);
+  if (optimizationGoal === 'net_profit' || optimizationGoal === 'gross_profit') {
+    suggestions.sort((a, b) => b.financials.gross_difference - a.financials.gross_difference);
+  } else if (optimizationGoal === 'proximity') {
+    suggestions.sort((a, b) => a.distance_km - b.distance_km || b.financials.gross_difference - a.financials.gross_difference);
   } else {
     // Balanced
     suggestions.sort((a, b) => b.opportunity_score - a.opportunity_score);
@@ -698,8 +657,8 @@ function findSmartOpportunitySuggestions(params = {}) {
     s.rank = idx + 1;
   });
 
-  const moreProfitable = suggestions.filter((s) => s.financials.net_gain_after_commute > 0);
-  const maxNetGain = moreProfitable.length > 0 ? Math.max(...moreProfitable.map((s) => s.financials.net_gain_after_commute)) : 0;
+  const moreProfitable = suggestions.filter((s) => s.financials.gross_difference > 0);
+  const maxGrossGain = moreProfitable.length > 0 ? Math.max(...moreProfitable.map((s) => s.financials.gross_difference)) : 0;
   const avgDist = suggestions.length > 0 ? Math.round((suggestions.reduce((a, b) => a + b.distance_km, 0) / suggestions.length) * 10) / 10 : 0;
 
   return {
@@ -711,18 +670,16 @@ function findSmartOpportunitySuggestions(params = {}) {
       specialty: baselineSpec,
       baseline_gross: baselineGross,
       baseline_split_pct: baselineSplit,
-      baseline_net_take_home: baselineNet,
-      baseline_admin_hours: baselineAdminHours
     },
     summary: {
       total_evaluated: suggestions.length,
       more_profitable_count: moreProfitable.length,
-      max_net_gain: maxNetGain,
+      max_gross_gain: maxGrossGain,
       average_distance_km: avgDist,
-      top_recommendation: suggestions[0] || null
+      top_recommendation: suggestions[0] || null,
     },
     optimization_goal: optimizationGoal,
-    suggestions: suggestions.slice(0, 15) // top 15 recommendations
+    suggestions: suggestions.slice(0, 15),
   };
 }
 

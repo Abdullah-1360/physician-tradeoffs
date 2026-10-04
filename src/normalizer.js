@@ -316,6 +316,21 @@ function normalizeJobRecord(job) {
     fullText.includes('cpsns') ||
     fullText.includes('college of physicians');
 
+  const today = new Date().toISOString().slice(0, 10);
+  const validThrough = job.dates?.valid_through || job.json_ld?.validThrough?.slice(0, 10) || null;
+  const startDate = job.dates?.start_date || job.start_date || null;
+  const closingDate = job.dates?.closing_date || validThrough || null;
+
+  // Check if ad is expired based on passed joining date or validity window
+  let is_expired = false;
+  if (validThrough && validThrough < today) {
+    is_expired = true;
+  } else if (closingDate && closingDate < today) {
+    is_expired = true;
+  } else if (startDate && startDate < today && (!validThrough || validThrough < today)) {
+    is_expired = true;
+  }
+
   return {
     job_id: job.job_id,
     url: job.url,
@@ -349,7 +364,11 @@ function normalizeJobRecord(job) {
     is_application_gated: Boolean(job.application?.is_gated),
     gate_message: job.application?.gate_message || null,
     posted_date: job.dates?.posted_date || null,
-    closing_date: job.dates?.closing_date || null,
+    closing_date: closingDate,
+    start_date: startDate,
+    valid_through: validThrough,
+    is_expired: Boolean(is_expired),
+    contact_emails: job.contact_emails || [],
     description_summary: job.description_summary || '',
     full_description_text: job.full_description_text || '',
     structured_sections: job.structured_sections || {},

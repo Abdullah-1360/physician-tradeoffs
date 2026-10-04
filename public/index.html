@@ -13,7 +13,7 @@
   
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="dark-theme">
+<body class="light-theme">
   <!-- Ambient background glow elements -->
   <div class="ambient-glow glow-1"></div>
   <div class="ambient-glow glow-2"></div>
@@ -54,11 +54,11 @@
     <!-- Navigation Tabs -->
     <nav class="nav-tabs-container">
       <div class="nav-tabs" role="tablist">
-        <button class="nav-tab is-active" id="tab-btn-overview" data-target="panel-overview">
+        <button class="nav-tab" id="tab-btn-overview" data-target="panel-overview">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           Overview & Market
         </button>
-        <button class="nav-tab nav-tab-glow" id="tab-btn-finder" data-target="panel-finder">
+        <button class="nav-tab nav-tab-glow is-active" id="tab-btn-finder" data-target="panel-finder">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
           🎯 AI Opportunity Matcher
         </button>
@@ -78,10 +78,6 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>
           4. Locum vs Permanent
         </button>
-        <button class="nav-tab" id="tab-btn-emr" data-target="panel-emr">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-          5. Admin Burden & Wage
-        </button>
         <button class="nav-tab" id="tab-btn-jobs" data-target="panel-jobs">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Live Job Explorer
@@ -95,7 +91,7 @@
       <!-- ============================================================== -->
       <!-- PANEL 0: Executive Overview & Market Stats                     -->
       <!-- ============================================================== -->
-      <section class="panel-view is-active" id="panel-overview">
+      <section class="panel-view" id="panel-overview">
         <div class="section-hero">
           <div class="hero-badge">PostgreSQL & ML Architecture</div>
           <h2>GTA Physician Compensation & Strategic Trade-Off Models</h2>
@@ -165,12 +161,12 @@
       <!-- ============================================================== -->
       <!-- PANEL: AI Opportunity & Location Matcher                       -->
       <!-- ============================================================== -->
-      <section class="panel-view" id="panel-finder">
+      <section class="panel-view is-active" id="panel-finder">
         <div class="section-hero">
           <div class="hero-badge badge-cyan">Intelligent Recommender Engine</div>
           <h2>AI Opportunity & Location Matcher</h2>
           <p class="hero-desc">
-            Enter your current Toronto/GTA location and baseline contract parameters. The engine queries real active physician postings across Toronto, North York, Markham, Mississauga, Danforth, and Midtown to discover more lucrative positions nearby, accounting for GTA traffic, CRA vehicle write-offs ($0.70/km), fee split margins, and administrative overhead support.
+            Enter your current Toronto/GTA location and baseline contract parameters. The engine queries verified active physician postings across Toronto, North York, Markham, Mississauga, and the GTA to discover more lucrative positions nearby, comparing gross earning potential, proximity, and clinical practice support.
           </p>
         </div>
 
@@ -255,24 +251,13 @@
                 </div>
               </div>
 
-              <div class="form-row-2">
-                <div class="form-group">
-                  <label for="finder-admin-hours">
-                    <span>Unpaid Charting / Admin (hrs/wk)</span>
-                  </label>
-                  <input type="number" id="finder-admin-hours" class="form-control" value="8" min="0" max="25" step="1">
-                </div>
-
-                <div class="form-group">
-                  <label for="finder-goal-select">Optimization Priority Goal</label>
-                  <select id="finder-goal-select" class="form-control">
-                    <option value="balanced" selected>🎯 Balanced Opportunity Score</option>
-                    <option value="net_profit">💰 Maximum Net Profit ($ CAD)</option>
-                    <option value="commute_roi">⚡ Highest Commute Driving ROI ($/hr)</option>
-                    <option value="split_margin">💼 Optimal Billing Split (≥ 75-80%)</option>
-                    <option value="admin_balance">🛡️ Lowest Admin Overhead (Full MOA / EMR)</option>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label for="finder-goal-select">Optimization Priority Goal</label>
+                <select id="finder-goal-select" class="form-control">
+                  <option value="balanced" selected>🎯 Highest Overall Opportunity</option>
+                  <option value="gross_profit">💰 Maximum Gross Income Advantage ($ CAD)</option>
+                  <option value="proximity">📍 Nearest Location (Minimal Commute)</option>
+                </select>
               </div>
 
               <div class="form-actions-row">
@@ -298,21 +283,13 @@
                 <span class="bstat-label">Specialty</span>
                 <span class="bstat-val" id="baseline-stat-specialty">Dermatology</span>
               </div>
-              <div class="baseline-stat-item">
-                <span class="bstat-label">Est. Annual Gross</span>
-                <span class="bstat-val" id="baseline-stat-gross">$550,000</span>
+              <div class="baseline-stat-item highlight-emerald">
+                <span class="bstat-label">Current Annual Gross</span>
+                <span class="bstat-val" id="baseline-stat-gross">$550,000 CAD</span>
               </div>
               <div class="baseline-stat-item">
                 <span class="bstat-label">Billing Split</span>
                 <span class="bstat-val" id="baseline-stat-split">70 / 30 (Physician 70%)</span>
-              </div>
-              <div class="baseline-stat-item highlight-cyan">
-                <span class="bstat-label">Current Net Take-Home</span>
-                <span class="bstat-val" id="baseline-stat-net">$385,000 CAD</span>
-              </div>
-              <div class="baseline-stat-item">
-                <span class="bstat-label">Unpaid Charting</span>
-                <span class="bstat-val" id="baseline-stat-admin">8 hrs / week</span>
               </div>
             </div>
           </div>
@@ -330,7 +307,7 @@
             <div class="kpi-card">
               <div class="kpi-icon icon-emerald"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><circle cx="12" cy="12" r="4"/></svg></div>
               <div class="kpi-meta">
-                <span class="kpi-label">More Profitable Nearby</span>
+                <span class="kpi-label">Gross Income Advantage</span>
                 <span class="kpi-value text-emerald" id="finder-kpi-profitable">--</span>
                 <span class="kpi-subtext">Beat current baseline</span>
               </div>
@@ -338,9 +315,9 @@
             <div class="kpi-card">
               <div class="kpi-icon icon-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
               <div class="kpi-meta">
-                <span class="kpi-label">Max Annual Net Gain</span>
-                <span class="kpi-value text-cyan" id="finder-kpi-max-gain">--</span>
-                <span class="kpi-subtext">After CRA vehicle deduction</span>
+                <span class="kpi-label">Max Gross Advantage</span>
+                <span class="kpi-value text-emerald" id="finder-kpi-max-gain">--</span>
+                <span class="kpi-subtext">Top clinic gross delta</span>
               </div>
             </div>
             <div class="kpi-card">
@@ -357,8 +334,8 @@
           <div class="card-section">
             <div class="card-header">
               <div>
-                <h3>Net Gain vs. Commute Distance Frontier</h3>
-                <p class="card-subtitle">Visualizing real clinics: Net Annual Profit Gain (after CRA commute deduction) relative to distance from your origin.</p>
+                <h3>Gross Income vs. Commute Distance Frontier</h3>
+                <p class="card-subtitle">Visualizing verified clinics: Estimated Gross Annual Billings relative to distance from your origin.</p>
               </div>
               <span class="badge-tag">Interactive Opportunity Frontier</span>
             </div>
@@ -469,12 +446,12 @@
                 <span class="sp-val" id="res-dist-per-km">+$11,999 / km</span>
               </div>
               <div class="stat-pill">
-                <span class="sp-label">Net Gain (after vehicle wear):</span>
-                <span class="sp-val text-cyan" id="res-dist-net">+$292,290</span>
+                <span class="sp-label">One-Way Drive:</span>
+                <span class="sp-val text-cyan" id="res-dist-commute-time">~35 mins</span>
               </div>
               <div class="stat-pill">
-                <span class="sp-label">Driving ROI:</span>
-                <span class="sp-val" id="res-dist-hourly-drive">$1,137 / hr driving</span>
+                <span class="sp-label">Regional Grants:</span>
+                <span class="sp-val text-purple" id="res-dist-grant">Eligible (+$20,000 CAD)</span>
               </div>
             </div>
 
@@ -743,74 +720,6 @@
 
             <div class="recommendation-callout" id="res-locum-recommendation">
               <strong>Strategy Insight:</strong> For a 3+ year horizon, Permanent practice generates significantly greater wealth (+$98,400 CAD cumulative) through compounding roster capitation, FHO access bonuses, and clinic equity.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================== -->
-      <!-- PANEL 5: EMR & Admin Burden Simulator                          -->
-      <!-- ============================================================== -->
-      <section class="panel-view" id="panel-emr">
-        <div class="section-hero">
-          <div class="hero-badge">Trade-Off 5</div>
-          <h2>Administrative & EMR Burden vs. Net Clinical Hourly Wage</h2>
-          <p class="hero-desc">
-            Is low overhead worth it? Calculate how unpaid charting, inbox review, and lab triage destroy your real hourly rate—and why paying 10% more in overhead for medical office staff pays for itself.
-          </p>
-        </div>
-
-        <div class="advisor-grid">
-          <div class="glass-card controls-card">
-            <h4>Practice Time & Overhead</h4>
-            
-            <div class="form-group slider-group">
-              <div class="slider-header">
-                <label for="emr-admin-hours">Weekly Unpaid Admin Hours:</label>
-                <span class="slider-display" id="emr-admin-display">12 hrs / week</span>
-              </div>
-              <input type="range" id="emr-admin-hours" min="4" max="20" step="1" value="12" class="slider-control">
-            </div>
-
-            <div class="form-group slider-group">
-              <div class="slider-header">
-                <label for="emr-gross-billing">Annual Gross Billings:</label>
-                <span class="slider-display" id="emr-billing-display">$480,000 CAD</span>
-              </div>
-              <input type="range" id="emr-gross-billing" min="300000" max="800000" step="20000" value="480000" class="slider-control">
-            </div>
-
-            <button id="btn-run-emr" class="btn-primary full-width">
-              Simulate Time vs Overhead
-            </button>
-          </div>
-
-          <div class="glass-card results-card">
-            <div class="tri-cards-row">
-              <div class="scenario-card">
-                <div class="sc-badge text-amber">Lean Practice (18% Overhead)</div>
-                <div class="sc-val" id="emr-sc1-hourly">$186 / hr</div>
-                <div class="sc-label">Real Effective Hourly Wage</div>
-                <p class="sc-detail">44 total hrs/wk (32 clinic + 12 admin). High burnout from evening inbox triage.</p>
-              </div>
-
-              <div class="scenario-card">
-                <div class="sc-badge text-emerald">Full Support (28% Overhead) - Time Off</div>
-                <div class="sc-val" id="emr-sc2-hourly">$200 / hr</div>
-                <div class="sc-label">Real Effective Hourly Wage</div>
-                <p class="sc-detail">36 total hrs/wk (admin cut to 4 hrs). <strong>384 hours of personal time saved/yr</strong>.</p>
-              </div>
-
-              <div class="scenario-card">
-                <div class="sc-badge text-cyan">Full Support - Converted to Growth</div>
-                <div class="sc-val" id="emr-sc3-income">+$16,800 / yr</div>
-                <div class="sc-label">Net Annual Income Boost</div>
-                <p class="sc-detail">Reinvesting half of saved admin hours into seeing patients completely offsets higher overhead.</p>
-              </div>
-            </div>
-
-            <div class="recommendation-callout" id="res-emr-recommendation">
-              <strong>Clinical Insight:</strong> Paying 10% more in clinic overhead to get full MOA & EMR support saves 384 hours of unpaid administrative drudgery per year. If you reinvest just half those hours into patient care, your annual net income increases by +$16,800 CAD.
             </div>
           </div>
         </div>
