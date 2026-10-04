@@ -8,7 +8,13 @@
     "serve": "node server.js",
     "scrape": "node index.js --mode single",
     "scrape:page1": "node index.js --mode page1",
-    "scrape:page1:summary": "node index.js --mode page1 --summary-only"
+    "scrape:page1:summary": "node index.js --mode page1 --summary-only",
+    "scrape:corridors": "node src/corridor_scraper.js",
+    "scrape:west": "node src/corridor_scraper.js --corridor='West Corridor'",
+    "scrape:north": "node src/corridor_scraper.js --corridor='North Corridor'",
+    "scrape:east": "node src/corridor_scraper.js --corridor='East Corridor'",
+    "scrape:northeast": "node src/corridor_scraper.js --corridor='Northeast Corridor'",
+    "scrape:gta": "node src/corridor_scraper.js --corridor='GTA Core'"
   },
   "engines": {
     "node": ">=18.x"

@@ -1,48 +1,70 @@
-name: Automated Ontario Corridor Physician Scraper & Pruning
+name: Automated Ontario Regional Corridor Scraper
 
 on:
   schedule:
     # Runs daily at 04:00 UTC (12:00 AM midnight EST)
     - cron: '0 4 * * *'
   workflow_dispatch:
-    # Allows manual trigger on-demand from GitHub UI
+    inputs:
+      target_corridor:
+        description: 'Select Corridor to scrape (or "All" to run all in parallel)'
+        required: true
+        default: 'All'
+        type: choice
+        options:
+          - 'All'
+          - 'West Corridor'
+          - 'North Corridor'
+          - 'East Corridor'
+          - 'Northeast Corridor'
+          - 'GTA Core'
 
 jobs:
-  scrape-and-sync:
-    name: Scrape Corridors & Prune Expired Postings
+  scrape-corridor:
+    name: Scrape - ${{ matrix.corridor }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false # Failure in one corridor never stops other corridors
+      matrix:
+        corridor:
+          - 'West Corridor'
+          - 'North Corridor'
+          - 'East Corridor'
+          - 'Northeast Corridor'
+          - 'GTA Core'
 
     steps:
+      - name: Check whether to run this corridor
+        id: check-run
+        run: |
+          TARGET="${{ github.event.inputs.target_corridor }}"
+          CURRENT="${{ matrix.corridor }}"
+          if [ -z "$TARGET" ] || [ "$TARGET" = "All" ] || [ "$TARGET" = "$CURRENT" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Skipping $CURRENT because target is $TARGET"
+          fi
+
       - name: Checkout Repository
+        if: steps.check-run.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js Environment
+        if: steps.check-run.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
       - name: Install Production Dependencies
+        if: steps.check-run.outputs.should_run == 'true'
         run: npm ci
 
-      - name: Execute Autonomous Regional Corridor Scraper
+      - name: Scrape ${{ matrix.corridor }} & Sync to Supabase
+        if: steps.check-run.outputs.should_run == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          node -e "
-          const { scrapeCorridors } = require('./src/corridor_scraper');
-          scrapeCorridors()
-            .then(res => {
-              console.log('----------------------------------------------------');
-              console.log('✅ Daily Scraper Completed Successfully!');
-              console.log('Active Verified Jobs Retained:', res.active_retained);
-              console.log('Stale/Expired Jobs Pruned:', res.expired_pruned);
-              console.log('----------------------------------------------------');
-              process.exit(0);
-            })
-            .catch(err => {
-              console.error('❌ Daily Scraper Failed:', err);
-              process.exit(1);
-            });
-          "
+          node src/corridor_scraper.js --corridor="${{ matrix.corridor }}"

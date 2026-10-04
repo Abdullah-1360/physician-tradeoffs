@@ -39,15 +39,8 @@ function calculateDistanceTradeOff(params = {}) {
   const salaryDelta = salaryB - salaryA;
   const pctDelta = salaryA > 0 ? ((salaryDelta / salaryA) * 100).toFixed(1) : 0;
 
-  // Commute economics (assuming 1.3 mins driving per km in GTA, CRA vehicle allowance $0.70/km)
-  const roundTripCommuteKmPerDay = kmDelta * 2;
-  const annualDrivingCost = Math.round(roundTripCommuteKmPerDay * 0.70 * 220); // 220 clinic days
-  const dailyExtraMinutes = Math.round(kmDelta * 1.4);
-  const annualExtraDrivingHours = Math.round((dailyExtraMinutes * 2 * 220) / 60);
-
-  // Net economic gain after vehicle operating expenses
-  const netSalaryDelta = salaryDelta - annualDrivingCost;
-  const effectiveEarningPerHourDriving = annualExtraDrivingHours > 0 ? Math.round(netSalaryDelta / annualExtraDrivingHours) : 0;
+  // Travel context (transit time and distance only, NO vehicle deductions or driving ROI)
+  const oneWayDriveMinutes = Math.max(5, Math.round(kmDelta * 1.4));
 
   // Rural/Regional grant eligibility (Ontario Ministry of Health Northern & Regional Incentives)
   const isGrantEligible = toKm >= 40;
@@ -65,12 +58,9 @@ function calculateDistanceTradeOff(params = {}) {
     gross_salary_difference: salaryDelta,
     percentage_gain: parseFloat(pctDelta),
     premium_per_km: kmDelta > 0 ? Math.round(salaryDelta / kmDelta) : 0,
-    commute_impact: {
-      daily_extra_commute_minutes: dailyExtraMinutes * 2,
-      annual_extra_commute_hours: annualExtraDrivingHours,
-      annual_vehicle_cost: annualDrivingCost,
-      net_annual_gain: netSalaryDelta,
-      net_wage_per_commute_hour: effectiveEarningPerHourDriving,
+    travel_context: {
+      one_way_drive_minutes: oneWayDriveMinutes,
+      distance_km: kmDelta,
     },
     incentives: {
       regional_grant_eligible: isGrantEligible,
@@ -79,8 +69,8 @@ function calculateDistanceTradeOff(params = {}) {
     },
     recommendation:
       salaryDelta > 40000
-        ? `Relocating or commuting ${kmDelta} km outward provides an exceptional gross annual advantage of +$${salaryDelta.toLocaleString()} CAD/year (+${pctDelta}%). Outward regional health centres offer higher patient volume and retention grants.`
-        : `Commuting ${kmDelta} km outward yields +$${salaryDelta.toLocaleString()} CAD gross advantage (+${pctDelta}%). Commute time is approximately ${dailyExtraMinutes} minutes each way. Weigh personal lifestyle preferences.`,
+        ? `Relocating or practicing ${kmDelta} km outward provides an exceptional gross annual advantage of +$${salaryDelta.toLocaleString()} CAD/year (+${pctDelta}%). Outward regional health centres offer higher patient volume and retention grants.`
+        : `Practicing ${kmDelta} km outward yields +$${salaryDelta.toLocaleString()} CAD gross advantage (+${pctDelta}%). Estimated one-way transit time is ~${oneWayDriveMinutes} minutes.`,
   };
 }
 
@@ -446,7 +436,7 @@ function calculateHaversine(lat1, lon1, lat2, lon2) {
 /**
  * Intelligent Opportunity & Contract Suggestion Engine
  * Suggests more profitable and advantageous opportunities nearby based on:
- * - Real distance and GTA commute economics (CRA $0.70/km deduction, driving time ROI)
+ * - Regional corridor distance and transit accessibility
  * - Billing & Contract variables (split %, guaranteed minimums, bonuses)
  * - Administrative support (zero EMR fee, turnkey clinic, dedicated MOA)
  */
@@ -458,7 +448,7 @@ function findSmartOpportunitySuggestions(params = {}) {
     currentSplit: customSplit,
     currentAdminHours: customAdminHours,
     maxDistanceKm = 45,
-    optimizationGoal = 'balanced', // 'net_profit' | 'commute_roi' | 'split_margin' | 'admin_balance' | 'balanced'
+    optimizationGoal = 'balanced', // 'gross_profit' | 'proximity' | 'balanced'
     jobsPool = []
   } = params;
 
@@ -649,9 +639,9 @@ function findSmartOpportunitySuggestions(params = {}) {
       },
       {
         step: 4,
-        title: 'Geospatial Transit & Time-Value Ratio',
-        verdict: distanceKm <= 15 ? 'High Proximity Efficiency' : 'Regional Commute',
-        analysis: `Radial distance of ${distanceKm} km (~${oneWayDriveMinutes} mins from ${loc.label || loc.key}). ${grossDifference > 20000 ? `Gross surplus yields approximately $${Math.max(120, Math.round(grossDifference / Math.max(1, (oneWayDriveMinutes * 2 * 220) / 60)))}/hr for commute time invested.` : 'Manageable transit buffer with steady patient roster access.'}`,
+        title: 'Geospatial Transit & Regional Accessibility',
+        verdict: distanceKm <= 15 ? 'High Proximity Efficiency' : distanceKm <= 40 ? 'Convenient Corridor Access' : 'Regional Health Centre',
+        analysis: `Located ${distanceKm} km (~${oneWayDriveMinutes} mins from ${loc.label || loc.key}). Accessible via major highway arterial routes with established regional clinical catchment.`,
       },
       {
         step: 5,

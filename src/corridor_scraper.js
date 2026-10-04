@@ -540,36 +540,84 @@ async function persistToDatabase(jobs) {
 function updateLocalJsonFallback(activeJobs, expiredCount) {
   try {
     const jsonPath = path.resolve(__dirname, '../data/toronto_specialties_jobs.json');
-    let manualJobs = [];
+    let existingJobs = [];
     if (fs.existsSync(jsonPath)) {
       const existing = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      // Preserve existing manual jobs
-      manualJobs = (existing.jobs || []).filter((j) => j.is_manual === true);
+      existingJobs = existing.jobs || [];
     }
 
-    const combined = [...manualJobs, ...activeJobs];
+    const jobMap = new Map();
+    // Keep existing jobs first
+    for (const j of existingJobs) {
+      if (j && j.job_id) jobMap.set(j.job_id, j);
+    }
+    // Upsert newly scraped active jobs
+    for (const j of activeJobs) {
+      if (j && j.job_id) {
+        // Scraped jobs never overwrite manual jobs
+        const prev = jobMap.get(j.job_id);
+        if (prev && prev.is_manual) continue;
+        jobMap.set(j.job_id, j);
+      }
+    }
+
+    const combined = Array.from(jobMap.values());
+    const manualJobsCount = combined.filter((j) => j.is_manual === true).length;
+    const scrapedJobsCount = combined.filter((j) => j.is_manual !== true).length;
+
     const payload = {
       corridors: ['West Corridor', 'North Corridor', 'East Corridor', 'Northeast Corridor', 'GTA Core'],
       cutoff_date: TODAY_ISO,
       total_active_jobs: combined.length,
-      manual_jobs_count: manualJobs.length,
-      scraped_jobs_count: activeJobs.length,
+      manual_jobs_count: manualJobsCount,
+      scraped_jobs_count: scrapedJobsCount,
       pruned_expired_count: expiredCount,
       generated_at: new Date().toISOString(),
       jobs: combined,
     };
 
     fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), 'utf8');
-    logger.success(`Local JSON fallback updated: ${combined.length} total active jobs (${manualJobs.length} manual preserved).`);
+    logger.success(`Local JSON fallback updated: ${combined.length} total active jobs (${manualJobsCount} manual preserved).`);
   } catch (err) {
     logger.warn(`Could not update local fallback JSON: ${err.message}`);
   }
 }
 
 if (require.main === module) {
-  scrapeCorridors()
+  const args = process.argv.slice(2);
+  let targetCorridors = null;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('--corridor=')) {
+      targetCorridors = [arg.split('=')[1]];
+    } else if (arg === '--corridor' && args[i + 1]) {
+      targetCorridors = [args[++i]];
+    }
+  }
+
+  if (targetCorridors) {
+    const CORRIDOR_MAP = {
+      west: 'West Corridor',
+      north: 'North Corridor',
+      east: 'East Corridor',
+      northeast: 'Northeast Corridor',
+      gta: 'GTA Core',
+      core: 'GTA Core',
+      all: null,
+    };
+    targetCorridors = targetCorridors
+      .map((c) => CORRIDOR_MAP[c.toLowerCase()] || c)
+      .filter(Boolean);
+    if (targetCorridors.length === 0) targetCorridors = null;
+  }
+
+  const corridorMsg = targetCorridors ? targetCorridors.join(', ') : 'All Corridors';
+  console.log(`Starting scraper run for: ${corridorMsg}`);
+
+  scrapeCorridors({ targetCorridors })
     .then((res) => {
-      console.log(`Autonomous scraping execution complete. ${res.active_retained} active listings ready.`);
+      console.log(`Autonomous scraping execution complete for ${corridorMsg}. ${res.active_retained} active listings ready.`);
       process.exit(0);
     })
     .catch((err) => {
