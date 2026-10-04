@@ -691,6 +691,7 @@ module.exports = {
   calculateEmrAdminTradeOff,
   findSmartOpportunitySuggestions,
   resolveLocation,
+  calculateHaversine,
   GTA_NEIGHBORHOODS,
 };
 

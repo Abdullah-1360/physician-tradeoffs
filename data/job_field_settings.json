@@ -1,0 +1,147 @@
+{
+  "preset": "standard",
+  "fields": {
+    "title": {
+      "key": "title",
+      "label": "Job Title",
+      "required": true,
+      "enabled": true,
+      "category": "identity",
+      "description": "Medical position title (e.g. Family Physician, Consultant Dermatologist)",
+      "placeholder": "e.g. Full-Time Family Physician (FHO Group Practice)"
+    },
+    "company": {
+      "key": "company",
+      "label": "Clinic / Organization Name",
+      "required": true,
+      "enabled": true,
+      "category": "identity",
+      "description": "Practice name or hospital health network",
+      "placeholder": "e.g. Yorkville Medical Associates"
+    },
+    "specialty": {
+      "key": "specialty",
+      "label": "Medical Specialty",
+      "required": true,
+      "enabled": true,
+      "category": "identity",
+      "description": "Clinical discipline",
+      "defaultValue": "Family Medicine"
+    },
+    "employment_type": {
+      "key": "employment_type",
+      "label": "Employment Type",
+      "required": true,
+      "enabled": true,
+      "category": "identity",
+      "description": "Full-time, Locum, Part-time, Permanent",
+      "defaultValue": "full-time"
+    },
+    "city": {
+      "key": "city",
+      "label": "City / GTA Neighborhood",
+      "required": true,
+      "enabled": true,
+      "category": "location",
+      "description": "Downtown Toronto, North York, Markham, Mississauga, etc.",
+      "defaultValue": "Downtown Toronto"
+    },
+    "street_address": {
+      "key": "street_address",
+      "label": "Street Address",
+      "required": false,
+      "enabled": true,
+      "category": "location",
+      "description": "Physical clinic address for proximity mapping",
+      "placeholder": "e.g. 150 Bloor Street West, Suite 400"
+    },
+    "annualized_salary": {
+      "key": "annualized_salary",
+      "label": "Estimated Annual Gross ($ CAD)",
+      "required": false,
+      "enabled": true,
+      "category": "compensation",
+      "description": "Estimated gross annual billings before practice overhead",
+      "placeholder": "e.g. 485000"
+    },
+    "physician_split_pct": {
+      "key": "physician_split_pct",
+      "label": "Physician Fee Split (%)",
+      "required": false,
+      "enabled": true,
+      "category": "compensation",
+      "description": "Physician percentage share of gross billings",
+      "defaultValue": 75
+    },
+    "signing_bonus": {
+      "key": "signing_bonus",
+      "label": "Signing Incentive Bonus ($ CAD)",
+      "required": false,
+      "enabled": true,
+      "category": "compensation",
+      "description": "Lump-sum signing or recruitment incentive",
+      "placeholder": "e.g. 25000"
+    },
+    "contact_emails": {
+      "key": "contact_emails",
+      "label": "Clinic Coordinator / Direct Contact Email",
+      "required": true,
+      "enabled": true,
+      "category": "contact",
+      "description": "Direct email for in-app physician contact channel",
+      "placeholder": "e.g. recruitment@clinicdomain.ca"
+    },
+    "contact_phone": {
+      "key": "contact_phone",
+      "label": "Clinic Telephone Number",
+      "required": false,
+      "enabled": true,
+      "category": "contact",
+      "description": "Direct telephone line for candidate inquiries",
+      "placeholder": "e.g. (416) 555-0199"
+    },
+    "emr_system": {
+      "key": "emr_system",
+      "label": "EMR System Environment",
+      "required": false,
+      "enabled": true,
+      "category": "clinical",
+      "description": "Electronic Medical Record platform",
+      "defaultValue": "Telus PS Suite"
+    },
+    "patient_volume": {
+      "key": "patient_volume",
+      "label": "Patient Volume / Waitlist Status",
+      "required": false,
+      "enabled": true,
+      "category": "clinical",
+      "description": "Roster availability and daily patient flow",
+      "defaultValue": "Turnkey active roster with immediate waitlist"
+    },
+    "valid_through": {
+      "key": "valid_through",
+      "label": "Posting Validity / Expiry Date",
+      "required": false,
+      "enabled": true,
+      "category": "clinical",
+      "description": "Date through which the position remains active"
+    },
+    "full_description_text": {
+      "key": "full_description_text",
+      "label": "Full Practice Description & Details",
+      "required": false,
+      "enabled": true,
+      "category": "clinical",
+      "description": "Complete practice overview, clinical support, and scope of care",
+      "placeholder": "Detail practice environment, nurse/MOA support, and call schedule..."
+    }
+  },
+  "defaults": {
+    "province": "ON",
+    "defaultSpecialty": "Family Medicine",
+    "defaultSplit": 75,
+    "defaultCommuteRadiusKm": 40,
+    "validityDurationDays": 90
+  },
+  "updated_at": "2026-10-04T16:13:58.608Z"
+}

@@ -213,6 +213,9 @@ app.get('/api/jobs', (req, res) => {
   });
 });
 
+const crypto = require('crypto');
+const { settingsManager } = require('./src/settings');
+
 // 4. Job Details by ID
 app.get('/api/jobs/:id', (req, res) => {
   const job = memoryJobs.find((j) => j.job_id === req.params.id);
@@ -220,6 +223,228 @@ app.get('/api/jobs/:id', (req, res) => {
     return res.status(404).json({ error: 'Job posting not found' });
   }
   res.json(job);
+});
+
+// 4b. Settings: Get and Update Job Field Requirements
+app.get('/api/settings/job-fields', (req, res) => {
+  res.json(settingsManager.getSettings());
+});
+
+app.post('/api/settings/job-fields', (req, res) => {
+  try {
+    const updated = settingsManager.saveSettings(req.body);
+    res.json({ success: true, settings: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save settings', details: err.message });
+  }
+});
+
+// 4c. Create New Physician Job (Validated against configurable Settings)
+app.post('/api/jobs', async (req, res) => {
+  try {
+    const validation = settingsManager.validateJobSubmission(req.body);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: validation.errors,
+      });
+    }
+
+    const loc = advisors.resolveLocation(req.body.city || 'Downtown Toronto');
+    const lat = req.body.latitude ? parseFloat(req.body.latitude) : loc.lat;
+    const lng = req.body.longitude ? parseFloat(req.body.longitude) : loc.lng;
+    const distanceKm = advisors.calculateHaversine(43.6532, -79.3832, lat, lng);
+
+    const jobId = req.body.job_id || crypto.randomBytes(12).toString('hex');
+    const today = new Date().toISOString().split('T')[0];
+    const defaultValidThrough = new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0];
+
+    const rawEmails = req.body.contact_emails;
+    const contactEmails = Array.isArray(rawEmails)
+      ? rawEmails
+      : (typeof rawEmails === 'string' && rawEmails.trim().length > 0)
+        ? rawEmails.split(/[,;\s]+/).filter((e) => e.includes('@'))
+        : [];
+
+    const annualizedSalary = req.body.annualized_salary ? parseFloat(req.body.annualized_salary) : null;
+    const physicianSplit = req.body.physician_split_pct ? parseFloat(req.body.physician_split_pct) : 75.0;
+    const clinicSplit = 100 - physicianSplit;
+
+    const structuredSections = {
+      Remuneration:
+        req.body.remuneration_notes ||
+        (annualizedSalary
+          ? `$${annualizedSalary.toLocaleString()} CAD / yr gross`
+          : `${physicianSplit}/${clinicSplit} FFS Split`),
+      Qualifications: 'CPSO licensure eligible, CFPC / Royal College, CMPA coverage',
+      'Clinic Details': `${req.body.emr_system || 'Telus PS Suite'}. ${req.body.patient_volume || 'Established patient roster with active community flow.'}`,
+    };
+
+    const newJob = {
+      job_id: jobId,
+      url: `/jobs/${jobId}`,
+      title: req.body.title.trim(),
+      specialty: req.body.specialty || 'Family Medicine',
+      employment_type: req.body.employment_type || 'full-time',
+      company: req.body.company ? req.body.company.trim() : 'Modern Health Centre',
+      city: req.body.city || 'Toronto',
+      province: req.body.province || 'ON',
+      street_address: req.body.street_address ? req.body.street_address.trim() : null,
+      location_formatted: req.body.street_address
+        ? `${req.body.street_address}, ${req.body.city || 'Toronto'}, ON`
+        : `${req.body.city || 'Toronto'}, ON`,
+      latitude: lat,
+      longitude: lng,
+      distance_from_toronto_km: distanceKm,
+      compensation_raw: annualizedSalary
+        ? `$${annualizedSalary.toLocaleString()} CAD`
+        : `${physicianSplit}/${clinicSplit} split`,
+      pay_rate_type: annualizedSalary ? 'annual' : 'split',
+      salary_min: annualizedSalary,
+      salary_max: annualizedSalary,
+      salary_avg: annualizedSalary,
+      annualized_salary: annualizedSalary,
+      physician_split_pct: physicianSplit,
+      clinic_split_pct: clinicSplit,
+      signing_bonus: req.body.signing_bonus ? parseFloat(req.body.signing_bonus) : null,
+      relocation_bonus: req.body.relocation_bonus ? parseFloat(req.body.relocation_bonus) : null,
+      accommodations_allowance: req.body.accommodations_allowance ? parseFloat(req.body.accommodations_allowance) : null,
+      travel_allowance: req.body.travel_allowance ? parseFloat(req.body.travel_allowance) : null,
+      is_hospital: Boolean(req.body.is_hospital),
+      requires_emr: true,
+      requires_cfpc: req.body.specialty === 'Family Medicine',
+      requires_cpso: true,
+      is_application_gated: false,
+      gate_message: null,
+      posted_date: req.body.posted_date || today,
+      closing_date: req.body.valid_through || defaultValidThrough,
+      start_date: req.body.start_date || today,
+      valid_through: req.body.valid_through || defaultValidThrough,
+      is_expired: false,
+      contact_emails: contactEmails,
+      description_summary: req.body.full_description_text ? req.body.full_description_text.slice(0, 200) : '',
+      full_description_text:
+        req.body.full_description_text ||
+        `${req.body.title} at ${req.body.company || 'Modern Practice'}. Turnkey clinic with full administrative support.`,
+      structured_sections: structuredSections,
+      external_links: [],
+      raw_json_ld: null,
+      scraped_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // If connected to live DB (PostgreSQL / Supabase), insert record
+    if (isDbConnected && pool) {
+      try {
+        const insertSql = `
+          INSERT INTO jobs (
+            job_id, url, title, specialty, employment_type, company,
+            city, province, street_address, location_formatted,
+            latitude, longitude, distance_from_toronto_km,
+            compensation_raw, pay_rate_type, salary_min, salary_max, salary_avg, annualized_salary,
+            physician_split_pct, clinic_split_pct, signing_bonus, relocation_bonus,
+            accommodations_allowance, travel_allowance, is_hospital, requires_emr,
+            requires_cfpc, requires_cpso, posted_date, closing_date, start_date, valid_through,
+            is_expired, contact_emails, description_summary, full_description_text, structured_sections
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10,
+            $11, $12, $13,
+            $14, $15, $16, $17, $18, $19,
+            $20, $21, $22, $23,
+            $24, $25, $26, $27,
+            $28, $29, $30, $31, $32, $33,
+            $34, $35, $36, $37, $38
+          )
+          ON CONFLICT (job_id) DO UPDATE SET
+            title = EXCLUDED.title,
+            annualized_salary = EXCLUDED.annualized_salary,
+            updated_at = NOW();
+        `;
+        const values = [
+          newJob.job_id,
+          newJob.url,
+          newJob.title,
+          newJob.specialty,
+          newJob.employment_type,
+          newJob.company,
+          newJob.city,
+          newJob.province,
+          newJob.street_address,
+          newJob.location_formatted,
+          newJob.latitude,
+          newJob.longitude,
+          newJob.distance_from_toronto_km,
+          newJob.compensation_raw,
+          newJob.pay_rate_type,
+          newJob.salary_min,
+          newJob.salary_max,
+          newJob.salary_avg,
+          newJob.annualized_salary,
+          newJob.physician_split_pct,
+          newJob.clinic_split_pct,
+          newJob.signing_bonus,
+          newJob.relocation_bonus,
+          newJob.accommodations_allowance,
+          newJob.travel_allowance,
+          newJob.is_hospital,
+          newJob.requires_emr,
+          newJob.requires_cfpc,
+          newJob.requires_cpso,
+          newJob.posted_date,
+          newJob.closing_date,
+          newJob.start_date,
+          newJob.valid_through,
+          newJob.is_expired,
+          JSON.stringify(newJob.contact_emails),
+          newJob.description_summary,
+          newJob.full_description_text,
+          JSON.stringify(newJob.structured_sections),
+        ];
+        await pool.query(insertSql, values);
+
+        // Update specialty count in specialties table
+        await pool.query(
+          `
+          INSERT INTO specialties (name, job_count, updated_at)
+          VALUES ($1, 1, NOW())
+          ON CONFLICT (name) DO UPDATE SET job_count = specialties.job_count + 1, updated_at = NOW();
+        `,
+          [newJob.specialty]
+        );
+
+        logger.success(`Job ${newJob.job_id} successfully persisted to Supabase database!`);
+      } catch (dbErr) {
+        logger.error(`Database insertion warning: ${dbErr.message}`);
+      }
+    }
+
+    // Add to memory dataset (at top so it shows first)
+    memoryJobs.unshift(newJob);
+
+    // Save to local JSON dataset as well
+    try {
+      const jsonPath = path.join(__dirname, 'data', 'toronto_specialties_jobs.json');
+      if (fs.existsSync(jsonPath)) {
+        const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        parsed.jobs = [newJob, ...(parsed.jobs || [])];
+        parsed.total_jobs_scraped = parsed.jobs.length;
+        fs.writeFileSync(jsonPath, JSON.stringify(parsed, null, 2), 'utf-8');
+      }
+    } catch (fsErr) {
+      logger.warn(`Could not update local JSON file: ${fsErr.message}`);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Physician opportunity successfully published',
+      job: newJob,
+      total_active_jobs: memoryJobs.length,
+    });
+  } catch (err) {
+    logger.error(`Error in POST /api/jobs: ${err.message}`);
+    res.status(500).json({ error: 'Failed to create job', details: err.message });
+  }
 });
 
 // =============================================================================

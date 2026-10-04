@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initLocumAdvisor();
   initEmrAdvisor();
   initJobsExplorer();
+  initJobCreationForm();
+  initSettingsPanel();
 });
 
 // =============================================================================
@@ -1284,3 +1286,395 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// =============================================================================
+// 9. Job Creation & Intake Engine
+// =============================================================================
+const GTA_CITY_DISTANCES = {
+  'Downtown Toronto': 0.0,
+  'Midtown': 5.8,
+  'North York': 13.5,
+  'Scarborough': 18.2,
+  'Etobicoke': 14.8,
+  'Markham': 25.5,
+  'Mississauga': 24.2,
+  'Vaughan': 22.0,
+  'Richmond Hill': 23.8,
+  'Brampton': 31.4,
+  'Oakville': 35.1,
+};
+
+function initJobCreationForm() {
+  const form = document.getElementById('post-job-form');
+  const splitInput = document.getElementById('post-split');
+  const splitPhysicianVal = document.getElementById('post-split-physician-val');
+  const splitClinicVal = document.getElementById('post-split-clinic-val');
+  const barPhysician = document.getElementById('post-split-bar-physician');
+  const barClinic = document.getElementById('post-split-bar-clinic');
+  const citySelect = document.getElementById('post-city');
+  const proximityText = document.getElementById('post-proximity-text');
+  const linkSettings = document.getElementById('link-goto-settings');
+  const resetBtn = document.getElementById('post-job-reset-btn');
+
+  function updateSplitVisualizer() {
+    if (!splitInput) return;
+    let p = parseFloat(splitInput.value);
+    if (isNaN(p)) p = 75;
+    if (p < 50) p = 50;
+    if (p > 95) p = 95;
+    const c = 100 - p;
+
+    if (splitPhysicianVal) splitPhysicianVal.innerText = `Physician Share: ${p}%`;
+    if (splitClinicVal) splitClinicVal.innerText = `Clinic Overhead: ${c}%`;
+    if (barPhysician) barPhysician.style.width = `${p}%`;
+    if (barClinic) barClinic.style.width = `${c}%`;
+  }
+
+  if (splitInput) {
+    splitInput.addEventListener('input', updateSplitVisualizer);
+  }
+
+  if (citySelect && proximityText) {
+    citySelect.addEventListener('change', () => {
+      const city = citySelect.value;
+      const km = GTA_CITY_DISTANCES[city] !== undefined ? GTA_CITY_DISTANCES[city] : 12.0;
+      proximityText.innerText = `~${km.toFixed(1)} km from Downtown Toronto (Haversine radial distance)`;
+    });
+  }
+
+  if (linkSettings) {
+    linkSettings.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchToTab('panel-settings');
+    });
+  }
+
+  if (resetBtn && form) {
+    resetBtn.addEventListener('click', () => {
+      form.reset();
+      updateSplitVisualizer();
+      showToast('Form fields have been reset.', 'info');
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = document.getElementById('post-job-submit-btn');
+      const origBtnText = submitBtn ? submitBtn.innerText : 'Submit';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = '⏳ Publishing to Supabase...';
+      }
+
+      const formData = new FormData(form);
+      const payload = {
+        title: (formData.get('title') || '').trim(),
+        company: (formData.get('company') || '').trim(),
+        specialty: formData.get('specialty') || 'Family Medicine',
+        employment_type: formData.get('employment_type') || 'full-time',
+        city: formData.get('city') || 'Downtown Toronto',
+        street_address: (formData.get('street_address') || '').trim(),
+        annualized_salary: formData.get('annualized_salary') || '',
+        signing_bonus: formData.get('signing_bonus') || '',
+        physician_split_pct: formData.get('physician_split_pct') || 75,
+        contact_emails: (formData.get('contact_emails') || '').trim(),
+        contact_phone: (formData.get('contact_phone') || '').trim(),
+        emr_system: formData.get('emr_system') || 'Telus PS Suite',
+        patient_volume: (formData.get('patient_volume') || '').trim(),
+        valid_through: formData.get('valid_through') || '',
+        full_description_text: (formData.get('full_description_text') || '').trim(),
+      };
+
+      try {
+        const res = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`Position '${payload.title}' published to Supabase & Live Explorer!`, 'success');
+          form.reset();
+          updateSplitVisualizer();
+
+          // Refresh database stats & jobs explorer
+          await initHealthAndOverview();
+          await loadJobs();
+
+          // Automatically transition to the live jobs view
+          setTimeout(() => switchToTab('panel-jobs'), 600);
+        } else {
+          const errList = data.details && Array.isArray(data.details)
+            ? data.details.join(' | ')
+            : (data.error || 'Job submission failed');
+          showToast(`Validation Failed: ${errList}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Network error: ${err.message}`, 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = origBtnText;
+        }
+      }
+    });
+  }
+}
+
+// =============================================================================
+// 10. Configurable Field Settings & Governance Engine
+// =============================================================================
+let currentSettings = null;
+
+async function initSettingsPanel() {
+  const saveBtn = document.getElementById('btn-save-settings');
+  const resetBtn = document.getElementById('btn-reset-settings');
+  const presetCards = document.querySelectorAll('.preset-card');
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveSettings);
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => applyPreset('standard'));
+  }
+
+  presetCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const presetKey = card.getAttribute('data-preset');
+      if (presetKey) applyPreset(presetKey);
+    });
+  });
+
+  // Load active settings from backend
+  await loadSettings();
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings/job-fields');
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    currentSettings = await res.json();
+    renderSettingsMatrix(currentSettings);
+    applySettingsToJobForm(currentSettings);
+    updatePresetCardHighlight(currentSettings.preset || 'standard');
+  } catch (err) {
+    console.warn('Using client fallback settings:', err);
+  }
+}
+
+function updatePresetCardHighlight(activePreset) {
+  const cards = document.querySelectorAll('.preset-card');
+  cards.forEach((card) => {
+    if (card.getAttribute('data-preset') === activePreset) {
+      card.classList.add('is-active');
+    } else {
+      card.classList.remove('is-active');
+    }
+  });
+}
+
+function renderSettingsMatrix(settings) {
+  const tbody = document.getElementById('settings-table-body');
+  if (!tbody || !settings || !settings.fields) return;
+
+  tbody.innerHTML = '';
+  const fields = settings.fields;
+
+  const categoryBadges = {
+    identity: { label: 'Identity', class: 'tag-blue' },
+    location: { label: 'Location', class: 'tag-emerald' },
+    compensation: { label: 'Compensation', class: 'tag-emerald' },
+    contact: { label: 'Outreach', class: 'tag-blue' },
+    clinical: { label: 'Clinical', class: '' },
+  };
+
+  Object.values(fields).forEach((field) => {
+    const tr = document.createElement('tr');
+    const catInfo = categoryBadges[field.category] || { label: field.category, class: '' };
+
+    tr.innerHTML = `
+      <td>
+        <div class="field-meta-col">
+          <span class="field-name-text">${escapeHtml(field.label)}</span>
+          <span class="field-key-code">${escapeHtml(field.key)}</span>
+        </div>
+      </td>
+      <td>
+        <span class="badge-tag ${catInfo.class}">${catInfo.label}</span>
+      </td>
+      <td style="color: var(--text-secondary); font-size: 0.85rem;">
+        ${escapeHtml(field.description || '')}
+      </td>
+      <td style="text-align: center;">
+        <label class="switch" title="Toggle required status">
+          <input type="checkbox" class="setting-req-toggle" data-key="${field.key}" ${field.required ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </td>
+      <td style="text-align: center;">
+        <label class="switch" title="Toggle enabled status">
+          <input type="checkbox" class="setting-enable-toggle" data-key="${field.key}" ${field.enabled !== false ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.setting-req-toggle').forEach((toggle) => {
+    toggle.addEventListener('change', (e) => {
+      const key = e.target.getAttribute('data-key');
+      if (currentSettings && currentSettings.fields[key]) {
+        currentSettings.fields[key].required = e.target.checked;
+        currentSettings.preset = 'custom';
+        updatePresetCardHighlight('custom');
+        applySettingsToJobForm(currentSettings);
+      }
+    });
+  });
+
+  tbody.querySelectorAll('.setting-enable-toggle').forEach((toggle) => {
+    toggle.addEventListener('change', (e) => {
+      const key = e.target.getAttribute('data-key');
+      if (currentSettings && currentSettings.fields[key]) {
+        currentSettings.fields[key].enabled = e.target.checked;
+        currentSettings.preset = 'custom';
+        updatePresetCardHighlight('custom');
+        applySettingsToJobForm(currentSettings);
+      }
+    });
+  });
+}
+
+function applySettingsToJobForm(settings) {
+  if (!settings || !settings.fields) return;
+
+  const fieldGroups = document.querySelectorAll('.form-field-group[data-field-key]');
+  fieldGroups.forEach((group) => {
+    const key = group.getAttribute('data-field-key');
+    const config = settings.fields[key];
+    if (!config) return;
+
+    // Toggle visibility based on enabled
+    if (config.enabled === false) {
+      group.style.display = 'none';
+    } else {
+      group.style.display = '';
+    }
+
+    // Toggle required indicator badge & input required attribute
+    const badge = group.querySelector('.field-req-badge');
+    const input = group.querySelector('input, select, textarea');
+
+    if (config.required) {
+      if (badge) {
+        badge.className = 'field-req-badge tag-req';
+        badge.innerText = '* Required';
+      }
+      if (input) {
+        input.setAttribute('required', 'required');
+      }
+    } else {
+      if (badge) {
+        badge.className = 'field-req-badge tag-opt';
+        badge.innerText = 'Optional';
+      }
+      if (input) {
+        input.removeAttribute('required');
+      }
+    }
+  });
+}
+
+function applyPreset(presetKey) {
+  if (!currentSettings || !currentSettings.fields) return;
+
+  const standardReq = ['title', 'company', 'specialty', 'employment_type', 'city', 'contact_emails'];
+  const strictReq = ['title', 'company', 'specialty', 'employment_type', 'city', 'street_address', 'annualized_salary', 'physician_split_pct', 'contact_emails', 'emr_system'];
+  const flexibleReq = ['title', 'specialty', 'contact_emails'];
+
+  let targetReq = standardReq;
+  if (presetKey === 'strict') targetReq = strictReq;
+  if (presetKey === 'flexible') targetReq = flexibleReq;
+
+  Object.keys(currentSettings.fields).forEach((key) => {
+    currentSettings.fields[key].required = targetReq.includes(key);
+    currentSettings.fields[key].enabled = true;
+  });
+
+  currentSettings.preset = presetKey;
+  updatePresetCardHighlight(presetKey);
+  renderSettingsMatrix(currentSettings);
+  applySettingsToJobForm(currentSettings);
+  showToast(`Applied ${presetKey.toUpperCase()} preset. Click 'Save & Apply Rules' to persist to backend.`, 'info');
+}
+
+async function saveSettings() {
+  if (!currentSettings) return;
+  const saveBtn = document.getElementById('btn-save-settings');
+  const origText = saveBtn ? saveBtn.innerText : 'Save';
+
+  try {
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerText = '⏳ Saving...';
+    }
+
+    const res = await fetch('/api/settings/job-fields', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentSettings),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      currentSettings = data.settings;
+      renderSettingsMatrix(currentSettings);
+      applySettingsToJobForm(currentSettings);
+      showToast('Field requirement settings successfully saved and active!', 'success');
+    } else {
+      showToast(`Error saving settings: ${data.error || 'Server error'}`, 'error');
+    }
+  } catch (err) {
+    showToast(`Network error: ${err.message}`, 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerText = origText;
+    }
+  }
+}
+
+// =============================================================================
+// 11. Toast Notifications & Global Navigation Helper
+// =============================================================================
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast-msg toast-${type}`;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️';
+  toast.innerHTML = `<span>${icon}</span> <span style="flex:1;">${escapeHtml(message)}</span>`;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 350);
+  }, 4500);
+}
+
+function switchToTab(targetPanelId) {
+  const btn = document.querySelector(`.nav-tab[data-target="${targetPanelId}"]`);
+  if (btn) {
+    btn.click();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+

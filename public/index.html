@@ -82,6 +82,14 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Live Job Explorer
         </button>
+        <button class="nav-tab nav-tab-add" id="tab-btn-post" data-target="panel-post-job">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Post a Job
+        </button>
+        <button class="nav-tab" id="tab-btn-settings" data-target="panel-settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </button>
       </div>
     </nav>
 
@@ -788,6 +796,353 @@
         </div>
       </section>
 
+      <!-- ============================================================== -->
+      <!-- PANEL 7: Post a Physician Job                                  -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-post-job">
+        <div class="section-hero">
+          <div class="hero-badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3);">
+            Live Physician Intake Engine
+          </div>
+          <h2>Post a New Physician Job Opportunity</h2>
+          <p class="hero-desc">
+            Directly inject a clinical opening into the verified Supabase PostgreSQL database. Added postings instantly participate in AI Opportunity Matching, geospatial radius calculations, and compensation trade-off models with zero external site links.
+          </p>
+          <div style="margin-top: 10px; font-size: 0.88rem; color: var(--text-secondary);">
+            Need to customize which parameters are required? 
+            <button type="button" class="btn-text-link" id="link-goto-settings" style="background:none; border:none; color: var(--accent-blue); font-weight:600; cursor:pointer; text-decoration:underline;">
+              Configure Field Rules in Settings &rarr;
+            </button>
+          </div>
+        </div>
+
+        <form id="post-job-form" class="post-job-container">
+          <!-- 1. Identity & Practice -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                1. Position Identity & Practice
+              </div>
+              <span class="form-section-desc">Clinical discipline and clinic affiliation</span>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field-group" data-field-key="title">
+                <div class="field-label-row">
+                  <label for="post-title" class="field-label-text">Job Title</label>
+                  <span class="field-req-badge tag-req" id="req-badge-title">* Required</span>
+                </div>
+                <input type="text" id="post-title" name="title" class="form-input" placeholder="e.g. Full-Time Family Physician (FHO Group Practice)" required>
+              </div>
+
+              <div class="form-field-group" data-field-key="company">
+                <div class="field-label-row">
+                  <label for="post-company" class="field-label-text">Clinic / Organization Name</label>
+                  <span class="field-req-badge tag-req" id="req-badge-company">* Required</span>
+                </div>
+                <input type="text" id="post-company" name="company" class="form-input" placeholder="e.g. Yorkville Medical Associates" required>
+              </div>
+
+              <div class="form-field-group" data-field-key="specialty">
+                <div class="field-label-row">
+                  <label for="post-specialty" class="field-label-text">Medical Specialty</label>
+                  <span class="field-req-badge tag-req" id="req-badge-specialty">* Required</span>
+                </div>
+                <select id="post-specialty" name="specialty" class="form-input" required>
+                  <option value="Family Medicine">Family Medicine</option>
+                  <option value="Internal Medicine">Internal Medicine</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="Emergency Medicine">Emergency Medicine</option>
+                  <option value="Psychiatry">Psychiatry</option>
+                  <option value="Obstetrics & Gynecology">Obstetrics & Gynecology</option>
+                  <option value="General Surgery">General Surgery</option>
+                  <option value="Cardiology">Cardiology</option>
+                </select>
+              </div>
+
+              <div class="form-field-group" data-field-key="employment_type">
+                <div class="field-label-row">
+                  <label for="post-employment-type" class="field-label-text">Employment Type</label>
+                  <span class="field-req-badge tag-req" id="req-badge-employment_type">* Required</span>
+                </div>
+                <select id="post-employment-type" name="employment_type" class="form-input" required>
+                  <option value="full-time">Full-Time (Permanent)</option>
+                  <option value="locum">Locum (Contract / Interim)</option>
+                  <option value="part-time">Part-Time</option>
+                  <option value="permanent">Permanent Partnership</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Practice Location -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                2. Practice Location & GTA Neighborhood
+              </div>
+              <span class="form-section-desc">Downtown Toronto proximity calculated in real time</span>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field-group" data-field-key="city">
+                <div class="field-label-row">
+                  <label for="post-city" class="field-label-text">City / GTA Neighborhood</label>
+                  <span class="field-req-badge tag-req" id="req-badge-city">* Required</span>
+                </div>
+                <select id="post-city" name="city" class="form-input" required>
+                  <option value="Downtown Toronto">Downtown Toronto (Core / University Ave)</option>
+                  <option value="Midtown">Midtown Toronto (Yonge & Eglinton)</option>
+                  <option value="North York">North York (Sheppard & Yonge)</option>
+                  <option value="Scarborough">Scarborough</option>
+                  <option value="Etobicoke">Etobicoke</option>
+                  <option value="Markham">Markham (York Region)</option>
+                  <option value="Mississauga">Mississauga (Peel Region)</option>
+                  <option value="Vaughan">Vaughan / Woodbridge</option>
+                  <option value="Richmond Hill">Richmond Hill</option>
+                  <option value="Brampton">Brampton</option>
+                  <option value="Oakville">Oakville (Halton Region)</option>
+                </select>
+              </div>
+
+              <div class="form-field-group" data-field-key="street_address">
+                <div class="field-label-row">
+                  <label for="post-street-address" class="field-label-text">Street Address</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-street_address">Optional</span>
+                </div>
+                <input type="text" id="post-street-address" name="street_address" class="form-input" placeholder="e.g. 150 Bloor Street West, Suite 400">
+              </div>
+            </div>
+
+            <div id="post-proximity-pill" style="margin-top: 14px; padding: 10px 14px; background: var(--bg-tertiary); border-radius: var(--radius-md); font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 600; color: var(--accent-blue);">📍 Proximity Benchmark:</span>
+              <span id="post-proximity-text">~0.0 km from Downtown Toronto (Haversine radial distance)</span>
+            </div>
+          </div>
+
+          <!-- 3. Remuneration & Overhead Split -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v12"/></svg>
+                3. Compensation & Fee Split Structure
+              </div>
+              <span class="form-section-desc">Gross billings before clinic overhead & recruitment incentives</span>
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-field-group" data-field-key="annualized_salary">
+                <div class="field-label-row">
+                  <label for="post-salary" class="field-label-text">Estimated Gross ($ CAD/yr)</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-annualized_salary">Optional</span>
+                </div>
+                <input type="number" id="post-salary" name="annualized_salary" class="form-input" placeholder="e.g. 485000" min="0" step="5000">
+              </div>
+
+              <div class="form-field-group" data-field-key="signing_bonus">
+                <div class="field-label-row">
+                  <label for="post-bonus" class="field-label-text">Signing Bonus ($ CAD)</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-signing_bonus">Optional</span>
+                </div>
+                <input type="number" id="post-bonus" name="signing_bonus" class="form-input" placeholder="e.g. 25000" min="0" step="1000">
+              </div>
+
+              <div class="form-field-group" data-field-key="physician_split_pct">
+                <div class="field-label-row">
+                  <label for="post-split" class="field-label-text">Physician Fee Split (%)</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-physician_split_pct">Optional</span>
+                </div>
+                <input type="number" id="post-split" name="physician_split_pct" class="form-input" value="75" min="50" max="95" step="1">
+              </div>
+            </div>
+
+            <!-- Dynamic Split Visualizer Bar -->
+            <div class="split-visualizer-box">
+              <div class="split-labels-row">
+                <span id="post-split-physician-val" style="color: #059669; font-weight:700;">Physician Share: 75%</span>
+                <span id="post-split-clinic-val" style="color: #475569; font-weight:700;">Clinic Overhead: 25%</span>
+              </div>
+              <div class="split-bar-track">
+                <div class="split-bar-physician" id="post-split-bar-physician" style="width: 75%;"></div>
+                <div class="split-bar-clinic" id="post-split-bar-clinic" style="width: 25%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Direct Coordinator Contact -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                4. Confidential Recruitment Outreach
+              </div>
+              <span class="form-section-desc">Zero external links — physicians reach coordinators directly in-app</span>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field-group" data-field-key="contact_emails">
+                <div class="field-label-row">
+                  <label for="post-email" class="field-label-text">Clinic Coordinator Email</label>
+                  <span class="field-req-badge tag-req" id="req-badge-contact_emails">* Required</span>
+                </div>
+                <input type="email" id="post-email" name="contact_emails" class="form-input" placeholder="e.g. recruitment@yorkvillemed.ca" required>
+              </div>
+
+              <div class="form-field-group" data-field-key="contact_phone">
+                <div class="field-label-row">
+                  <label for="post-phone" class="field-label-text">Clinic Telephone</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-contact_phone">Optional</span>
+                </div>
+                <input type="tel" id="post-phone" name="contact_phone" class="form-input" placeholder="e.g. (416) 555-0199">
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Clinical Specs & Description -->
+          <div class="form-section-card">
+            <div class="form-section-header">
+              <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                5. Clinical Specifications & Full Description
+              </div>
+              <span class="form-section-desc">EMR environment, patient roster status, and posting duration</span>
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-field-group" data-field-key="emr_system">
+                <div class="field-label-row">
+                  <label for="post-emr" class="field-label-text">EMR Platform</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-emr_system">Optional</span>
+                </div>
+                <select id="post-emr" name="emr_system" class="form-input">
+                  <option value="Telus PS Suite">Telus PS Suite</option>
+                  <option value="Accuro EMR">Accuro EMR (QHR)</option>
+                  <option value="OSCAR EMR">OSCAR McMaster / Juno</option>
+                  <option value="Epic">Epic Healthcare Systems</option>
+                  <option value="Cerner">Cerner Millennium</option>
+                  <option value="Med Access">Telus Med Access</option>
+                  <option value="Other / Hybrid EMR">Other / Hybrid Platform</option>
+                </select>
+              </div>
+
+              <div class="form-field-group" data-field-key="patient_volume">
+                <div class="field-label-row">
+                  <label for="post-volume" class="field-label-text">Patient Volume / Roster</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-patient_volume">Optional</span>
+                </div>
+                <input type="text" id="post-volume" name="patient_volume" class="form-input" value="Turnkey active roster with immediate waitlist" placeholder="e.g. 1,200 rostered patients ready for takeover">
+              </div>
+
+              <div class="form-field-group" data-field-key="valid_through">
+                <div class="field-label-row">
+                  <label for="post-valid-through" class="field-label-text">Posting Expiry Date</label>
+                  <span class="field-req-badge tag-opt" id="req-badge-valid_through">Optional</span>
+                </div>
+                <input type="date" id="post-valid-through" name="valid_through" class="form-input">
+              </div>
+            </div>
+
+            <div class="form-field-group" data-field-key="full_description_text" style="margin-top: 16px;">
+              <div class="field-label-row">
+                <label for="post-description" class="field-label-text">Full Practice Overview & Clinical Support</label>
+                <span class="field-req-badge tag-opt" id="req-badge-full_description_text">Optional</span>
+              </div>
+              <textarea id="post-description" name="full_description_text" class="form-input" rows="4" placeholder="Detail nursing coverage, MOA ratio, allied health support, call obligations, and partnership track..."></textarea>
+            </div>
+          </div>
+
+          <!-- Form Actions Bar -->
+          <div class="form-actions-bar">
+            <button type="button" class="btn btn-outline" id="post-job-reset-btn">Reset Form</button>
+            <button type="submit" class="btn btn-primary" id="post-job-submit-btn" style="min-width: 200px;">
+              🚀 Publish Job to Database
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- PANEL 8: Configurable Field Settings                           -->
+      <!-- ============================================================== -->
+      <section class="panel-view" id="panel-settings">
+        <div class="section-hero">
+          <div class="hero-badge" style="background: rgba(37, 99, 235, 0.12); color: var(--accent-blue); border-color: rgba(37, 99, 235, 0.3);">
+            Validation & Requirement Governance
+          </div>
+          <h2>Job Posting Parameter Settings</h2>
+          <p class="hero-desc">
+            Configure dynamic validation rules for adding physician jobs. Toggle which parameters are strictly required vs optional, or choose one-click governance presets. Changes sync immediately to both client-side form controls and backend API validation.
+          </p>
+        </div>
+
+        <!-- Presets Grid -->
+        <div class="settings-presets-grid">
+          <div class="preset-card is-active" id="preset-card-standard" data-preset="standard">
+            <div class="preset-card-header">
+              <span class="preset-card-title">Standard Preset</span>
+              <span class="badge-tag tag-blue">Recommended</span>
+            </div>
+            <p class="preset-card-desc">
+              Balanced intake: Requires position title, clinic name, specialty, employment type, city neighborhood, and coordinator contact email. Compensation and clinical specs remain optional.
+            </p>
+          </div>
+
+          <div class="preset-card" id="preset-card-strict" data-preset="strict">
+            <div class="preset-card-header">
+              <span class="preset-card-title">Strict Preset</span>
+              <span class="badge-tag tag-emerald">High Fidelity</span>
+            </div>
+            <p class="preset-card-desc">
+              Mandatory compensation transparency: Enforces annualized gross salary, fee split percentage, street address, and EMR environment to guarantee complete ML feature sets.
+            </p>
+          </div>
+
+          <div class="preset-card" id="preset-card-flexible" data-preset="flexible">
+            <div class="preset-card-header">
+              <span class="preset-card-title">Flexible Preset</span>
+              <span class="badge-tag" style="background:#f1f5f9; color:#475569;">Rapid Intake</span>
+            </div>
+            <p class="preset-card-desc">
+              Minimal friction: Only requires position title, specialty, and contact email. Ideal for quick drafts, informal locum listings, or rapid outreach postings.
+            </p>
+          </div>
+        </div>
+
+        <!-- Matrix Table Card -->
+        <div class="settings-matrix-card">
+          <div class="dialog-header" style="background:#ffffff; border-bottom: 1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h3 style="font-size: 1.15rem; margin-bottom: 4px;">Field Requirement Matrix</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin:0;">Toggle required flags and enable/disable individual parameters below.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="button" class="btn btn-outline" id="btn-reset-settings">Reset to Standard</button>
+              <button type="button" class="btn btn-primary" id="btn-save-settings">💾 Save & Apply Rules</button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="settings-matrix-table" id="settings-table">
+              <thead>
+                <tr>
+                  <th>Field Parameter</th>
+                  <th>Category</th>
+                  <th>Description / Clinical Impact</th>
+                  <th style="text-align:center;">Required?</th>
+                  <th style="text-align:center;">Enabled?</th>
+                </tr>
+              </thead>
+              <tbody id="settings-table-body">
+                <!-- Dynamically generated rows from Settings API -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <!-- Job Detail Modal Dialog -->
@@ -808,6 +1163,8 @@
       <p>PhysicianCareers.ca Intelligence Engine &bull; Built with Playwright, PostgreSQL/Supabase, and CatBoost &bull; Fully Self-Contained</p>
     </footer>
   </div>
+
+  <div id="toast-container" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>
