@@ -1,0 +1,48 @@
+name: Automated Ontario Corridor Physician Scraper & Pruning
+
+on:
+  schedule:
+    # Runs daily at 04:00 UTC (12:00 AM midnight EST)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    # Allows manual trigger on-demand from GitHub UI
+
+jobs:
+  scrape-and-sync:
+    name: Scrape Corridors & Prune Expired Postings
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Production Dependencies
+        run: npm ci
+
+      - name: Execute Autonomous Regional Corridor Scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          node -e "
+          const { scrapeCorridors } = require('./src/corridor_scraper');
+          scrapeCorridors()
+            .then(res => {
+              console.log('----------------------------------------------------');
+              console.log('✅ Daily Scraper Completed Successfully!');
+              console.log('Active Verified Jobs Retained:', res.active_retained);
+              console.log('Stale/Expired Jobs Pruned:', res.expired_pruned);
+              console.log('----------------------------------------------------');
+              process.exit(0);
+            })
+            .catch(err => {
+              console.error('❌ Daily Scraper Failed:', err);
+              process.exit(1);
+            });
+          "

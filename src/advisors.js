@@ -550,9 +550,16 @@ function findSmartOpportunitySuggestions(params = {}) {
       desc.toLowerCase().includes('immediate waitlist') ||
       desc.toLowerCase().includes('busy clinic') ||
       desc.toLowerCase().includes('4-6/hr');
-
     // 7. Multi-Factor Opportunity Score (0 - 100)
     let score = 50; // base
+
+    const corridor = job.corridor || 'GTA Core';
+    const nrrriTotal = parseFloat(job.nrrri_incentive_amount) || 0;
+    const nrrriAnnual = Math.round(nrrriTotal / 4);
+    const proStatus = job.pro_ros_status || (nrrriTotal > 0 ? 'CONFIRMED_PRO' : 'STANDARD');
+    const isManual = Boolean(job.is_manual);
+    const allInAnnualComp = Math.round(candidateGross + nrrriAnnual + signingBonus / 2);
+    const fourYearPackage = Math.round(candidateGross * 4 + nrrriTotal + signingBonus);
 
     // Gross Earning Advantage (up to +35 pts)
     if (grossDifference > 200000) score += 35;
@@ -562,55 +569,99 @@ function findSmartOpportunitySuggestions(params = {}) {
     else if (grossDifference > 0) score += 5;
     else score -= 15;
 
-    // Proximity & Convenient Access (up to +25 pts)
-    if (distanceKm <= 5) score += 25;
-    else if (distanceKm <= 12) score += 20;
-    else if (distanceKm <= 25) score += 14;
-    else if (distanceKm <= 40) score += 8;
+    // NRRRI Provincial Incentive Leverage (up to +18 pts)
+    if (nrrriTotal >= 100000) score += 18;
+    else if (nrrriTotal >= 84000) score += 14;
+    else if (proStatus === 'PRO_POSSIBLE') score += 6;
 
-    // Practice Support & Structure (up to +20 pts)
-    if (hasFullAdminStaff) score += 10;
-    if (hasZeroEmrFee) score += 5;
-    if (hasHighVolume) score += 5;
+    // Proximity & Convenient Access (up to +20 pts)
+    if (distanceKm <= 5) score += 20;
+    else if (distanceKm <= 15) score += 15;
+    else if (distanceKm <= 35) score += 10;
+    else if (distanceKm <= 60) score += 5;
+
+    // Practice Support & Structure (up to +15 pts)
+    if (hasFullAdminStaff) score += 8;
+    if (hasZeroEmrFee) score += 4;
+    if (hasHighVolume) score += 3;
     if (signingBonus > 0 || accommodationsAllowance > 0) score += 5;
 
     score = Math.max(10, Math.min(99, Math.round(score)));
 
-    // Badges & Rationale Generation (Zero Driving ROI, Zero Commute Deductions)
+    // Badges & Rationale Generation
     const badges = [];
+    if (nrrriTotal > 0) badges.push(`💰 +$${Math.round(nrrriTotal / 1000)}k NRRRI Grant`);
+    if (proStatus === 'CONFIRMED_PRO') badges.push('🌲 Confirmed PRO Region');
+    if (proStatus === 'NURC') badges.push('🏥 NURC Referral Hub');
+    if (isManual) badges.push('✍️ Verified Direct Post');
     if (grossDifference > 100000) badges.push('🚀 High Gross Advantage');
-    if (distanceKm <= 8) badges.push('📍 Close Proximity');
+    if (distanceKm <= 12) badges.push('📍 Close Proximity');
     if (hasHighVolume) badges.push('📈 Guaranteed Patient Flow');
     if (hasFullAdminStaff) badges.push('✨ Full MOA Support');
     if (hasZeroEmrFee) badges.push('🛡️ Zero EMR Overhead');
-    if (signingBonus > 0) badges.push('💰 Signing Incentive');
 
     const aiRationale = [];
     if (grossDifference > 0) {
       aiRationale.push(
-        `Generates an estimated $${Math.round(candidateGross).toLocaleString()} CAD gross annual income (+$${Math.round(grossDifference).toLocaleString()} CAD gross advantage over your baseline).`
+        `Generates an estimated $${Math.round(candidateGross).toLocaleString()} CAD gross annual billings (+$${Math.round(grossDifference).toLocaleString()} CAD gross surplus over baseline).`
       );
     } else {
       aiRationale.push(
-        `Competitive gross annual income of $${Math.round(candidateGross).toLocaleString()} CAD with established patient roster.`
+        `Competitive gross annual income of $${Math.round(candidateGross).toLocaleString()} CAD with established clinical roster.`
+      );
+    }
+
+    if (nrrriTotal > 0) {
+      aiRationale.push(
+        `Eligible for Practice Ready Ontario (PRO) with an official 4-year NRRRI retention grant of $${nrrriTotal.toLocaleString()} CAD (adds +$${nrrriAnnual.toLocaleString()}/yr).`
       );
     }
 
     aiRationale.push(
-      `Located in ${job.city || 'Toronto'} (${distanceKm} km, ~${oneWayDriveMinutes} mins commute from ${loc.label || loc.key}).`
+      `Located in ${job.city || 'Ontario'} (${corridor}, ${distanceKm} km, ~${oneWayDriveMinutes} mins commute from ${loc.label || loc.key}).`
     );
 
-    if (hasFullAdminStaff) {
-      aiRationale.push(
-        `Full administrative & MOA staffing handles clerical tasks, charting coordination, and appointment scheduling.`
-      );
-    }
-
-    if (hasHighVolume) {
-      aiRationale.push(
-        `Guaranteed patient volume with active clinic roster ensuring immediate clinical utilization.`
-      );
-    }
+    // Multi-factor Autonomous AI Thinking Process
+    const aiThinkingProcess = [
+      {
+        step: 1,
+        title: 'Earning Velocity & Market Arbitrage',
+        verdict: grossDifference >= 0 ? 'Favorable Premium' : 'Baseline Alignment',
+        analysis: grossDifference > 0
+          ? `Model benchmarks position against ${baselineSpec} baseline ($${baselineGross.toLocaleString()} CAD). Generates +$${Math.round(grossDifference).toLocaleString()} CAD/yr gross surplus (+${percentageGain}% velocity).`
+          : `Compensation aligns with regional standard baseline for ${baselineSpec} ($${baselineGross.toLocaleString()} CAD).`,
+      },
+      {
+        step: 2,
+        title: 'Provincial NRRRI & Retention Incentive Leverage',
+        verdict: nrrriTotal > 0 ? 'Confirmed Provincial Grant' : proStatus === 'PRO_POSSIBLE' ? 'PRO Verification Candidate' : 'Urban Base Rate',
+        analysis: nrrriTotal > 0
+          ? `Community qualifies for Practice Ready Ontario (PRO) with an official 4-year NRRRI retention grant of $${nrrriTotal.toLocaleString()} CAD ($${nrrriAnnual.toLocaleString()}/yr annualized). Combined with billings, 4-year cumulative gross reaches $${Math.round(fourYearPackage).toLocaleString()} CAD.`
+          : proStatus === 'PRO_POSSIBLE'
+            ? `Location identified as prospective PRO expansion geography. Site verification recommended with Ontario Health to confirm local return-of-service eligibility.`
+            : `Metropolitan zone excluded from provincial rural ROS grants. Compensation relies purely on fee-for-service / capitation billings.`,
+      },
+      {
+        step: 3,
+        title: 'Overhead Friction & Clinical Workflow Velocity',
+        verdict: candidateSplit >= 75 ? 'Low Overhead Drag' : 'Standard Clinic Split',
+        analysis: `${candidateSplit}/${100 - candidateSplit} fee split keeps clinic overhead at ${100 - candidateSplit}%. ${hasFullAdminStaff ? 'Dedicated MOA/nursing coverage eliminates estimated 4-6 hrs/week of non-billable clerical charting.' : 'Shared reception environment; standard clerical coordination required.'}`,
+      },
+      {
+        step: 4,
+        title: 'Geospatial Transit & Time-Value Ratio',
+        verdict: distanceKm <= 15 ? 'High Proximity Efficiency' : 'Regional Commute',
+        analysis: `Radial distance of ${distanceKm} km (~${oneWayDriveMinutes} mins from ${loc.label || loc.key}). ${grossDifference > 20000 ? `Gross surplus yields approximately $${Math.max(120, Math.round(grossDifference / Math.max(1, (oneWayDriveMinutes * 2 * 220) / 60)))}/hr for commute time invested.` : 'Manageable transit buffer with steady patient roster access.'}`,
+      },
+      {
+        step: 5,
+        title: 'Autonomous Strategic Recommendation',
+        verdict: score >= 80 ? 'High Conviction Opportunity' : score >= 65 ? 'Balanced Competitive Practice' : 'Selective Consideration',
+        analysis: score >= 80
+          ? `Top decile opportunity. Model strongly endorses this posting based on superior earnings velocity, provincial incentive leverage, and favorable clinic overhead terms.`
+          : `Solid clinical opportunity offering dependable roster stability and competitive gross billings within the ${corridor}.`,
+      },
+    ];
 
     suggestions.push({
       job_id: job.job_id,
@@ -618,9 +669,13 @@ function findSmartOpportunitySuggestions(params = {}) {
       company: job.company || 'Modern Medical Centre',
       specialty: job.specialty,
       city: job.city,
-      street_address: job.street_address || job.location_formatted || 'Greater Toronto Area',
+      street_address: job.street_address || job.location_formatted || 'Ontario',
       distance_km: distanceKm,
       one_way_drive_minutes: oneWayDriveMinutes,
+      corridor: corridor,
+      pro_ros_status: proStatus,
+      nrrri_incentive_amount: nrrriTotal,
+      is_manual: isManual,
       opportunity_score: score,
       badges: badges.slice(0, 4),
       financials: {
@@ -628,6 +683,10 @@ function findSmartOpportunitySuggestions(params = {}) {
         gross_difference: Math.round(grossDifference),
         percentage_gain: percentageGain,
         candidate_split_pct: candidateSplit,
+        nrrri_total_grant: nrrriTotal,
+        nrrri_annualized: nrrriAnnual,
+        all_in_annual_comp: allInAnnualComp,
+        four_year_cumulative_wealth: fourYearPackage,
         signing_bonus: signingBonus,
         accommodations_allowance: accommodationsAllowance,
       },
@@ -639,6 +698,7 @@ function findSmartOpportunitySuggestions(params = {}) {
         patient_volume_status: hasHighVolume ? 'Guaranteed 4-6 pts/hr with active waitlist' : 'Steady community walk-in & referral flow',
       },
       ai_rationale: aiRationale,
+      ai_thinking_process: aiThinkingProcess,
     });
   }
 
@@ -661,6 +721,38 @@ function findSmartOpportunitySuggestions(params = {}) {
   const maxGrossGain = moreProfitable.length > 0 ? Math.max(...moreProfitable.map((s) => s.financials.gross_difference)) : 0;
   const avgDist = suggestions.length > 0 ? Math.round((suggestions.reduce((a, b) => a + b.distance_km, 0) / suggestions.length) * 10) / 10 : 0;
 
+  const topOpt = suggestions[0] || null;
+  let topThinkingProcess = null;
+  if (topOpt) {
+    const candGross = topOpt.financials.candidate_gross;
+    const nrrriTotal = topOpt.financials.nrrri_total_grant || 0;
+    const nrrriYear = Math.round(nrrriTotal / 4);
+
+    const wealthTrajectory = [1, 2, 3, 4].map((year) => ({
+      year,
+      baseline_cumulative: baselineGross * year,
+      candidate_cumulative: candGross * year + nrrriYear * year,
+      nrrri_payout_cumulative: nrrriYear * year,
+      cumulative_wealth_advantage: (candGross * year + nrrriYear * year) - (baselineGross * year),
+    }));
+
+    topThinkingProcess = {
+      executive_rationale: topOpt.financials.gross_difference > 0
+        ? `Autonomous diagnostic identified high-alpha practice transition to ${topOpt.company} in ${topOpt.city}. Generating +$${topOpt.financials.gross_difference.toLocaleString()} CAD/yr gross surplus (+${topOpt.financials.percentage_gain}%) with a 4-year cumulative advantage of +$${wealthTrajectory[3].cumulative_wealth_advantage.toLocaleString()} CAD.`
+        : `Autonomous diagnostic selected ${topOpt.company} in ${topOpt.city} as the optimal local match maximizing patient roster stability and turnkey practice infrastructure.`,
+      diagnostic_steps: (topOpt.ai_thinking_process || []).map((st) => ({
+        step: st.step,
+        name: st.title,
+        category: st.verdict,
+        finding: st.analysis,
+        strategic_insight: st.verdict && (st.verdict.includes('Arbitrage') || st.verdict.includes('High') || st.verdict.includes('Confirmed'))
+          ? 'Exceptional positioning for career equity and earnings acceleration.'
+          : 'Sustainable practice workflow with dependable community volume.',
+      })),
+      wealth_trajectory: wealthTrajectory,
+    };
+  }
+
   return {
     origin: {
       key: loc.key,
@@ -676,9 +768,10 @@ function findSmartOpportunitySuggestions(params = {}) {
       more_profitable_count: moreProfitable.length,
       max_gross_gain: maxGrossGain,
       average_distance_km: avgDist,
-      top_recommendation: suggestions[0] || null,
+      top_recommendation: topOpt,
     },
     optimization_goal: optimizationGoal,
+    ai_thinking_process: topThinkingProcess,
     suggestions: suggestions.slice(0, 15),
   };
 }

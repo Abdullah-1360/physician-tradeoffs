@@ -70,24 +70,37 @@ async function initDatabase() {
       max: 10,
     });
 
+    pool.on('error', (err) => {
+      logger.warn(`PostgreSQL background pool notice: ${err.message}`);
+    });
+
     const client = await pool.connect();
     const res = await client.query('SELECT COUNT(*) FROM jobs');
     logger.success(`Connected to PostgreSQL! Total jobs in database: ${res.rows[0].count}`);
     isDbConnected = true;
-
-    // Load full dataset directly from PostgreSQL into memory for fast serving
-    const dbJobs = await client.query('SELECT * FROM jobs ORDER BY annualized_salary DESC NULLS LAST');
-    if (dbJobs.rows && dbJobs.rows.length > 0) {
-      memoryJobs = dbJobs.rows;
-    }
-    const dbSpecs = await client.query('SELECT specialty, COUNT(*) as count FROM jobs GROUP BY specialty ORDER BY count DESC');
-    if (dbSpecs.rows && dbSpecs.rows.length > 0) {
-      memorySpecialties = dbSpecs.rows;
-    }
+    await refreshMemoryJobs();
     client.release();
   } catch (err) {
     logger.warn(`PostgreSQL connection to ${dbUrl} unavailable: ${err.message}. Operating with high-performance memory dataset.`);
     isDbConnected = false;
+  }
+}
+
+async function refreshMemoryJobs() {
+  if (isDbConnected && pool) {
+    try {
+      const dbJobs = await pool.query('SELECT * FROM jobs WHERE is_expired IS NOT TRUE ORDER BY annualized_salary DESC NULLS LAST');
+      if (dbJobs.rows && dbJobs.rows.length > 0) {
+        memoryJobs = dbJobs.rows;
+      }
+      const dbSpecs = await pool.query('SELECT specialty, COUNT(*) as count FROM jobs WHERE is_expired IS NOT TRUE GROUP BY specialty ORDER BY count DESC');
+      if (dbSpecs.rows && dbSpecs.rows.length > 0) {
+        memorySpecialties = dbSpecs.rows;
+      }
+      logger.info(`Refreshed in-memory cache: ${memoryJobs.length} active jobs loaded.`);
+    } catch (err) {
+      logger.error(`Error refreshing memory jobs: ${err.message}`);
+    }
   }
 }
 
@@ -171,7 +184,18 @@ app.get('/api/stats/overview', async (req, res) => {
 
 // 3. Searchable Jobs Listing
 app.get('/api/jobs', (req, res) => {
-  const { search, specialty, employment_type, min_salary, max_distance, limit = 50, offset = 0 } = req.query;
+  const {
+    search,
+    specialty,
+    employment_type,
+    min_salary,
+    max_distance,
+    corridor,
+    pro_only,
+    nrrri_only,
+    limit = 50,
+    offset = 0
+  } = req.query;
 
   let filtered = [...memoryJobs];
 
@@ -182,6 +206,7 @@ app.get('/api/jobs', (req, res) => {
         (j.title && j.title.toLowerCase().includes(q)) ||
         (j.company && j.company.toLowerCase().includes(q)) ||
         (j.city && j.city.toLowerCase().includes(q)) ||
+        (j.corridor && j.corridor.toLowerCase().includes(q)) ||
         (j.full_description_text && j.full_description_text.toLowerCase().includes(q))
     );
   }
@@ -192,6 +217,18 @@ app.get('/api/jobs', (req, res) => {
 
   if (employment_type && employment_type !== 'All') {
     filtered = filtered.filter((j) => j.employment_type && j.employment_type.toLowerCase() === employment_type.toLowerCase());
+  }
+
+  if (corridor && corridor !== 'All') {
+    filtered = filtered.filter((j) => j.corridor && j.corridor.toLowerCase() === corridor.toLowerCase());
+  }
+
+  if (pro_only === 'true' || pro_only === true) {
+    filtered = filtered.filter((j) => j.pro_ros_status && j.pro_ros_status !== 'Excluded' && j.pro_ros_status !== 'None');
+  }
+
+  if (nrrri_only === 'true' || nrrri_only === true) {
+    filtered = filtered.filter((j) => j.nrrri_incentive_amount && j.nrrri_incentive_amount > 0);
   }
 
   if (min_salary) {
@@ -280,6 +317,12 @@ app.post('/api/jobs', async (req, res) => {
       'Clinic Details': `${req.body.emr_system || 'Telus PS Suite'}. ${req.body.patient_volume || 'Established patient roster with active community flow.'}`,
     };
 
+    const corridor = req.body.corridor || loc.corridor || 'GTA Core';
+    const nrrriAmount = req.body.nrrri_incentive_amount !== undefined && req.body.nrrri_incentive_amount !== null && req.body.nrrri_incentive_amount !== ''
+      ? parseFloat(req.body.nrrri_incentive_amount)
+      : (loc.nrrri || 0);
+    const proRos = req.body.pro_ros_status || loc.pro_ros || 'PRO Possible';
+
     const newJob = {
       job_id: jobId,
       url: `/jobs/${jobId}`,
@@ -296,6 +339,10 @@ app.post('/api/jobs', async (req, res) => {
       latitude: lat,
       longitude: lng,
       distance_from_toronto_km: distanceKm,
+      corridor: corridor,
+      nrrri_incentive_amount: nrrriAmount,
+      pro_ros_status: proRos,
+      is_manual: true,
       compensation_raw: annualizedSalary
         ? `$${annualizedSalary.toLocaleString()} CAD`
         : `${physicianSplit}/${clinicSplit} split`,
@@ -333,8 +380,14 @@ app.post('/api/jobs', async (req, res) => {
       updated_at: new Date().toISOString(),
     };
 
+    function sanitizeDate(d) {
+      if (!d || typeof d !== 'string') return null;
+      const match = d.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+      return match ? match[1] : null;
+    }
+
     // If connected to live DB (PostgreSQL / Supabase), insert record
-    if (isDbConnected && pool) {
+    if (pool) {
       try {
         const insertSql = `
           INSERT INTO jobs (
@@ -345,7 +398,8 @@ app.post('/api/jobs', async (req, res) => {
             physician_split_pct, clinic_split_pct, signing_bonus, relocation_bonus,
             accommodations_allowance, travel_allowance, is_hospital, requires_emr,
             requires_cfpc, requires_cpso, posted_date, closing_date, start_date, valid_through,
-            is_expired, contact_emails, description_summary, full_description_text, structured_sections
+            is_expired, contact_emails, description_summary, full_description_text, structured_sections,
+            is_manual, corridor, nrrri_incentive_amount, pro_ros_status
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10,
@@ -354,11 +408,16 @@ app.post('/api/jobs', async (req, res) => {
             $20, $21, $22, $23,
             $24, $25, $26, $27,
             $28, $29, $30, $31, $32, $33,
-            $34, $35, $36, $37, $38
+            $34, $35, $36, $37, $38,
+            $39, $40, $41, $42
           )
           ON CONFLICT (job_id) DO UPDATE SET
             title = EXCLUDED.title,
             annualized_salary = EXCLUDED.annualized_salary,
+            is_manual = TRUE,
+            corridor = EXCLUDED.corridor,
+            nrrri_incentive_amount = EXCLUDED.nrrri_incentive_amount,
+            pro_ros_status = EXCLUDED.pro_ros_status,
             updated_at = NOW();
         `;
         const values = [
@@ -391,15 +450,19 @@ app.post('/api/jobs', async (req, res) => {
           newJob.requires_emr,
           newJob.requires_cfpc,
           newJob.requires_cpso,
-          newJob.posted_date,
-          newJob.closing_date,
-          newJob.start_date,
-          newJob.valid_through,
+          sanitizeDate(newJob.posted_date) || today,
+          sanitizeDate(newJob.closing_date) || defaultValidThrough,
+          sanitizeDate(newJob.start_date) || today,
+          sanitizeDate(newJob.valid_through) || defaultValidThrough,
           newJob.is_expired,
           JSON.stringify(newJob.contact_emails),
           newJob.description_summary,
           newJob.full_description_text,
           JSON.stringify(newJob.structured_sections),
+          newJob.is_manual,
+          newJob.corridor,
+          newJob.nrrri_incentive_amount,
+          newJob.pro_ros_status,
         ];
         await pool.query(insertSql, values);
 
@@ -529,6 +592,188 @@ app.post('/api/suggestions/opportunity-finder', (req, res) => {
     logger.error(`Error in opportunity finder: ${err.message}`);
     res.status(500).json({ error: 'Failed to compute opportunity suggestions', details: err.message });
   }
+});
+
+// =============================================================================
+// 7. REAL-TIME GEOSPATIAL MAP & REGIONAL CORRIDOR APIS
+// =============================================================================
+
+app.get('/api/map/summary', (req, res) => {
+  const corridorStats = {
+    'West Corridor': { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() },
+    'North Corridor': { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() },
+    'East Corridor': { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() },
+    'Northeast Corridor': { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() },
+    'GTA Core': { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() },
+  };
+
+  const communityMap = {};
+
+  memoryJobs.forEach((j) => {
+    const c = j.corridor || 'GTA Core';
+    const city = j.city || 'Toronto';
+
+    if (!corridorStats[c]) {
+      corridorStats[c] = { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() };
+    }
+
+    corridorStats[c].total_jobs++;
+    corridorStats[c].communities.add(city);
+
+    if (j.annualized_salary > 0) {
+      corridorStats[c].salary_sum += j.annualized_salary;
+      corridorStats[c].salary_count++;
+    }
+    if (j.pro_ros_status && j.pro_ros_status.includes('PRO')) {
+      corridorStats[c].pro_count++;
+    }
+    if (j.nrrri_incentive_amount > corridorStats[c].max_nrrri) {
+      corridorStats[c].max_nrrri = j.nrrri_incentive_amount;
+    }
+
+    if (!communityMap[city]) {
+      communityMap[city] = {
+        city,
+        corridor: c,
+        latitude: j.latitude,
+        longitude: j.longitude,
+        distance_from_toronto_km: j.distance_from_toronto_km,
+        pro_ros_status: j.pro_ros_status || 'PRO Possible',
+        nrrri_incentive_amount: j.nrrri_incentive_amount || 0,
+        total_jobs: 0,
+        salary_sum: 0,
+        salary_count: 0,
+        avg_gross_salary: 0,
+        sample_jobs: [],
+      };
+    }
+
+    communityMap[city].total_jobs++;
+    if (j.annualized_salary > 0) {
+      communityMap[city].salary_sum += j.annualized_salary;
+      communityMap[city].salary_count++;
+      communityMap[city].avg_gross_salary = Math.round(communityMap[city].salary_sum / communityMap[city].salary_count);
+    }
+    if (communityMap[city].sample_jobs.length < 5) {
+      communityMap[city].sample_jobs.push({
+        job_id: j.job_id,
+        title: j.title,
+        specialty: j.specialty,
+        company: j.company,
+        annualized_salary: j.annualized_salary,
+        nrrri_incentive_amount: j.nrrri_incentive_amount,
+      });
+    }
+  });
+
+  const formattedCorridors = {};
+  for (const [k, v] of Object.entries(corridorStats)) {
+    formattedCorridors[k] = {
+      total_jobs: v.total_jobs,
+      avg_salary: v.salary_count > 0 ? Math.round(v.salary_sum / v.salary_count) : 0,
+      pro_count: v.pro_count,
+      max_nrrri: v.max_nrrri,
+      communities_count: v.communities.size,
+    };
+  }
+
+  res.json({
+    total_active_jobs: memoryJobs.length,
+    corridors: formattedCorridors,
+    communities: Object.values(communityMap),
+  });
+});
+
+// All Active Map Jobs with coordinates and remuneration for map plotting
+app.get('/api/map/jobs', (req, res) => {
+  const { corridor, pro_only } = req.query;
+
+  let jobs = memoryJobs.filter((j) => j.latitude && j.longitude && !j.is_expired);
+
+  if (corridor && corridor !== 'All') {
+    jobs = jobs.filter((j) => j.corridor && j.corridor.toLowerCase() === corridor.toLowerCase());
+  }
+
+  if (pro_only === 'true') {
+    jobs = jobs.filter((j) => j.pro_ros_status && j.pro_ros_status !== 'Excluded' && j.pro_ros_status !== 'None');
+  }
+
+  res.json({
+    count: jobs.length,
+    jobs: jobs.map((j) => ({
+      job_id: j.job_id,
+      title: j.title,
+      company: j.company,
+      specialty: j.specialty,
+      employment_type: j.employment_type,
+      city: j.city,
+      corridor: j.corridor || 'GTA Core',
+      latitude: j.latitude,
+      longitude: j.longitude,
+      distance_from_toronto_km: j.distance_from_toronto_km,
+      annualized_salary: j.annualized_salary,
+      physician_split_pct: j.physician_split_pct,
+      nrrri_incentive_amount: j.nrrri_incentive_amount || 0,
+      pro_ros_status: j.pro_ros_status || 'PRO Possible',
+      is_manual: Boolean(j.is_manual),
+      contact_emails: j.contact_emails || [],
+      description_summary: j.description_summary || '',
+      posted_date: j.posted_date,
+      valid_through: j.valid_through,
+    })),
+  });
+});
+
+// =============================================================================
+// 8. AUTOMATED REGIONAL SCRAPER TRIGGER & STATUS
+// =============================================================================
+
+let scraperStatus = {
+  running: false,
+  last_run: null,
+  last_result: null,
+  last_error: null,
+};
+
+app.get('/api/scraper/status', (req, res) => {
+  res.json({
+    ...scraperStatus,
+    active_in_memory: memoryJobs.length,
+  });
+});
+
+app.post('/api/scraper/trigger', async (req, res) => {
+  if (scraperStatus.running) {
+    return res.status(409).json({ message: 'Scraper run is already in progress' });
+  }
+
+  const { scrapeCorridors } = require('./src/corridor_scraper');
+  const targetCorridors = req.body.corridors || null;
+
+  scraperStatus.running = true;
+  scraperStatus.last_run = new Date().toISOString();
+
+  // Run in background asynchronously so API responds immediately
+  (async () => {
+    try {
+      const summary = await scrapeCorridors({ targetCorridors });
+      scraperStatus.running = false;
+      scraperStatus.last_result = summary;
+      scraperStatus.last_error = null;
+      await refreshMemoryJobs();
+      logger.success(`Automated scraper completed. Active retained: ${summary.active_retained}`);
+    } catch (err) {
+      scraperStatus.running = false;
+      scraperStatus.last_error = err.message;
+      logger.error(`Automated scraper failed: ${err.message}`);
+    }
+  })();
+
+  res.json({
+    success: true,
+    message: 'Regional corridor scraper triggered successfully in background',
+    status: scraperStatus,
+  });
 });
 
 // Catch-all fallback for SPA client routing (Express 5 compatible)

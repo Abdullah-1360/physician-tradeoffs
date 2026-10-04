@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLocumAdvisor();
   initEmrAdvisor();
   initJobsExplorer();
+  initRealTimeMap();
   initJobCreationForm();
   initSettingsPanel();
 });
@@ -67,6 +68,10 @@ function initTabs() {
       // Trigger simulation / canvas redraw when switching panels
       if (targetId === 'panel-finder') {
         runOpportunitySimulation();
+      } else if (targetId === 'panel-map') {
+        if (realTimeMap) {
+          setTimeout(() => realTimeMap.invalidateSize(), 150);
+        }
       } else if (targetId === 'panel-distance') {
         runDistanceSimulation();
       } else if (targetId === 'panel-split') {
@@ -973,6 +978,78 @@ function renderOpportunityResults(data) {
   }
   if (avgDistKpi) avgDistKpi.innerText = `${summary.average_distance_km} km`;
 
+  // Render Autonomous AI Diagnostic Thinking Process
+  const thinkingCard = document.getElementById('ai-thinking-card');
+  const thinkingBody = document.getElementById('ai-thinking-body');
+  if (thinkingCard && thinkingBody && data.ai_thinking_process) {
+    thinkingCard.style.display = 'block';
+    const proc = data.ai_thinking_process;
+
+    let stepsHtml = (proc.diagnostic_steps || []).map((st) => `
+      <div class="ai-thinking-step">
+        <div class="ai-step-top">
+          <span class="ai-step-name">Step ${st.step}: ${escapeHtml(st.name)}</span>
+          <span class="ai-step-category">${escapeHtml(st.category)}</span>
+        </div>
+        <p class="ai-step-finding">${escapeHtml(st.finding)}</p>
+        <p class="ai-step-insight"><strong>Strategic Implication:</strong> ${escapeHtml(st.strategic_insight)}</p>
+      </div>
+    `).join('');
+
+    let tableHtml = '';
+    if (proc.wealth_trajectory && proc.wealth_trajectory.length > 0) {
+      tableHtml = `
+        <div class="wealth-trajectory-wrapper">
+          <h5>📈 Multi-Year Cumulative Wealth Advantage (4-Year Horizon)</h5>
+          <table class="wealth-table">
+            <thead>
+              <tr>
+                <th>Timeline</th>
+                <th>Baseline Cumulative</th>
+                <th>Recommended Cumulative</th>
+                <th>NRRRI Grant Paid</th>
+                <th>Net Alpha Advantage</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${proc.wealth_trajectory.map((w) => `
+                <tr>
+                  <td><strong>Year ${w.year}</strong></td>
+                  <td>$${w.baseline_cumulative.toLocaleString()} CAD</td>
+                  <td>$${w.candidate_cumulative.toLocaleString()} CAD</td>
+                  <td><span class="grant-pill grant-tier-1">$${w.nrrri_payout_cumulative.toLocaleString()} CAD</span></td>
+                  <td><strong style="color: #059669;">+$${w.cumulative_wealth_advantage.toLocaleString()} CAD</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    thinkingBody.innerHTML = `
+      <div style="background: rgba(124, 58, 237, 0.06); padding: 14px 18px; border-radius: 10px; border-left: 4px solid #7c3aed; margin-bottom: 12px;">
+        <strong style="color: #4c1d95; font-size: 0.92rem;">🤖 Autonomous Strategic Verdict:</strong>
+        <p style="font-size: 0.88rem; color: #1e293b; margin-top: 4px; line-height: 1.5;">${escapeHtml(proc.executive_rationale)}</p>
+      </div>
+      ${stepsHtml}
+      ${tableHtml}
+    `;
+
+    // Hook up accordion toggle
+    const toggleHeader = document.getElementById('ai-thinking-toggle');
+    if (toggleHeader) {
+      toggleHeader.onclick = () => {
+        const isHidden = thinkingBody.style.display === 'none';
+        thinkingBody.style.display = isHidden ? 'flex' : 'none';
+        const btnText = document.getElementById('ai-toggle-btn-text');
+        const btnArrow = document.getElementById('ai-toggle-arrow');
+        if (btnText) btnText.innerText = isHidden ? 'Collapse Breakdown' : 'View Diagnostic Breakdown';
+        if (btnArrow) btnArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      };
+    }
+  }
+
   // Render Opportunity Cards
   const container = document.getElementById('finder-suggestions-container');
   if (!container) return;
@@ -1677,4 +1754,369 @@ function switchToTab(targetPanelId) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+// =============================================================================
+// Real-Time Ontario PRO / ROS Geospatial Opportunity Map
+// =============================================================================
+
+let realTimeMap = null;
+let mapMarkersLayer = null;
+let allMapJobs = [];
+let allMapCommunities = [];
+
+async function initRealTimeMap() {
+  const mapElement = document.getElementById('realtime-leaflet-map');
+  if (!mapElement || typeof L === 'undefined') return;
+
+  // Initialize Leaflet Map centered on Southern & Central Ontario
+  if (!realTimeMap) {
+    realTimeMap = L.map('realtime-leaflet-map', {
+      center: [44.3, -79.5],
+      zoom: 8,
+      minZoom: 6,
+      maxZoom: 14,
+      zoomControl: true,
+      scrollWheelZoom: true,
+    });
+
+    // Clean, high-performance light CartoDB Voyager tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OSM</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(realTimeMap);
+
+    // 500 km planning radius circle around Toronto (matching screenshot)
+    const torontoCenter = [43.6532, -79.3832];
+    L.circle(torontoCenter, {
+      radius: 500000,
+      color: '#0284c7',
+      weight: 1.5,
+      dashArray: '6, 6',
+      fillColor: '#0284c7',
+      fillOpacity: 0.02,
+      interactive: false,
+    }).addTo(realTimeMap);
+
+    // Toronto Anchor Marker
+    const torontoIcon = L.divIcon({
+      className: 'toronto-anchor-icon',
+      html: `
+        <div style="background: #e11d48; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 14px rgba(225, 29, 72, 0.8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 800;">T</div>
+      `,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+    L.marker(torontoCenter, { icon: torontoIcon })
+      .bindTooltip('<strong>Toronto (GTA Core Anchor)</strong><br>0 km reference baseline', { direction: 'top' })
+      .addTo(realTimeMap);
+
+    mapMarkersLayer = L.layerGroup().addTo(realTimeMap);
+  }
+
+  // Hook up filter dropdowns & controls
+  const corridorSelect = document.getElementById('map-corridor-filter');
+  const proSelect = document.getElementById('map-pro-filter');
+  const searchInput = document.getElementById('map-search-input');
+  const btnScraper = document.getElementById('btn-trigger-scraper');
+  const btnCloseDrawer = document.getElementById('btn-close-map-drawer');
+
+  if (corridorSelect) corridorSelect.addEventListener('change', filterAndRenderMap);
+  if (proSelect) proSelect.addEventListener('change', filterAndRenderMap);
+  if (searchInput) searchInput.addEventListener('input', debounce(filterAndRenderMap, 250));
+  if (btnCloseDrawer) {
+    btnCloseDrawer.addEventListener('click', () => {
+      const drawer = document.getElementById('map-community-drawer');
+      if (drawer) drawer.style.display = 'none';
+    });
+  }
+
+  if (btnScraper) {
+    btnScraper.addEventListener('click', triggerAutomatedScraper);
+  }
+
+  await loadRealTimeMapData();
+}
+
+async function loadRealTimeMapData() {
+  try {
+    const [summaryRes, jobsRes] = await Promise.all([
+      fetch('/api/map/summary'),
+      fetch('/api/map/jobs'),
+    ]);
+
+    const summaryData = await summaryRes.json();
+    const jobsData = await jobsRes.json();
+
+    allMapCommunities = summaryData.communities || [];
+    allMapJobs = jobsData.jobs || [];
+
+    // Update KPI Bar
+    const kpiTotal = document.getElementById('map-kpi-total');
+    const kpiPro = document.getElementById('map-kpi-pro');
+    const kpiNrrri = document.getElementById('map-kpi-nrrri');
+    const kpiSalary = document.getElementById('map-kpi-salary');
+
+    if (kpiTotal) kpiTotal.innerText = `${summaryData.total_active_jobs || allMapJobs.length} Live`;
+    
+    let proJobsCount = 0;
+    let maxSal = 0;
+    allMapJobs.forEach((j) => {
+      if (j.pro_ros_status && j.pro_ros_status.includes('PRO')) proJobsCount++;
+      if (j.annualized_salary > maxSal) maxSal = j.annualized_salary;
+    });
+
+    if (kpiPro) kpiPro.innerText = `${proJobsCount} Roles`;
+    if (kpiNrrri) kpiNrrri.innerText = '$111,920';
+    if (kpiSalary) kpiSalary.innerText = maxSal > 0 ? `$${Math.round(maxSal / 1000)}k CAD` : '$550k CAD';
+
+    filterAndRenderMap();
+  } catch (err) {
+    console.error('Failed to load map data:', err);
+  }
+}
+
+function filterAndRenderMap() {
+  if (!mapMarkersLayer || !realTimeMap) return;
+  mapMarkersLayer.clearLayers();
+
+  const corridorFilter = document.getElementById('map-corridor-filter')?.value || 'All';
+  const proFilter = document.getElementById('map-pro-filter')?.value || 'all';
+  const searchQuery = (document.getElementById('map-search-input')?.value || '').toLowerCase().trim();
+
+  let filtered = [...allMapCommunities];
+
+  if (corridorFilter !== 'All') {
+    filtered = filtered.filter((c) => c.corridor && c.corridor.toLowerCase() === corridorFilter.toLowerCase());
+  }
+
+  if (proFilter === 'pro_only') {
+    filtered = filtered.filter((c) => c.pro_ros_status && c.pro_ros_status.includes('Confirmed'));
+  }
+
+  if (searchQuery) {
+    filtered = filtered.filter(
+      (c) =>
+        c.city.toLowerCase().includes(searchQuery) ||
+        (c.corridor && c.corridor.toLowerCase().includes(searchQuery))
+    );
+  }
+
+  const bounds = [];
+
+  filtered.forEach((c) => {
+    if (!c.latitude || !c.longitude) return;
+
+    bounds.push([c.latitude, c.longitude]);
+
+    // Format display gross salary
+    const displayGross = c.avg_gross_salary > 0
+      ? `$${Math.round(c.avg_gross_salary / 1000)}k`
+      : `${c.total_jobs} ${c.total_jobs === 1 ? 'Job' : 'Jobs'}`;
+
+    // NRRRI grant badge
+    const nrrriBadge = c.nrrri_incentive_amount > 0
+      ? `<span class="salary-pin-nrrri">+$${Math.round(c.nrrri_incentive_amount / 1000)}k</span>`
+      : '';
+
+    // Color code status dot & pin
+    let statusClass = 'pin-possible';
+    let dotClass = 'dot-orange';
+    if (c.pro_ros_status && c.pro_ros_status.includes('Confirmed')) {
+      statusClass = 'pin-pro';
+      dotClass = 'dot-green';
+    } else if (c.corridor === 'GTA Core' || (c.pro_ros_status && c.pro_ros_status.includes('Excluded'))) {
+      statusClass = 'pin-gta';
+      dotClass = 'dot-red';
+    }
+
+    const pinHtml = `
+      <div class="salary-pin-pill ${statusClass}">
+        <span class="salary-pin-dot ${dotClass}"></span>
+        <span class="salary-pin-amount">${displayGross}</span>
+        ${nrrriBadge}
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      className: 'salary-map-pin',
+      html: pinHtml,
+      iconSize: [120, 32],
+      iconAnchor: [60, 16],
+    });
+
+    const marker = L.marker([c.latitude, c.longitude], { icon });
+
+    // Popup Content
+    const popupHtml = `
+      <div class="map-popup-card">
+        <div class="map-popup-header">
+          <div class="map-popup-badge-row">
+            <span class="map-popup-badge badge-corridor">${escapeHtml(c.corridor)}</span>
+            ${c.nrrri_incentive_amount ? `<span class="map-popup-badge badge-grant">NRRRI: $${c.nrrri_incentive_amount.toLocaleString()}</span>` : ''}
+          </div>
+          <h4 class="map-popup-title">${escapeHtml(c.city)}</h4>
+          <span class="map-popup-meta">${c.distance_from_toronto_km ? Math.round(c.distance_from_toronto_km) + ' km from Toronto' : 'Central Region'} • ${escapeHtml(c.pro_ros_status)}</span>
+        </div>
+        <div class="map-popup-stats">
+          <div class="popup-stat-col">
+            <span>Avg Gross Billings</span>
+            <strong>${c.avg_gross_salary > 0 ? '$' + c.avg_gross_salary.toLocaleString() + ' CAD' : '75/25 Split'}</strong>
+          </div>
+          <div class="popup-stat-col">
+            <span>Active Openings</span>
+            <strong>${c.total_jobs} ${c.total_jobs === 1 ? 'Position' : 'Positions'}</strong>
+          </div>
+        </div>
+        <div class="map-popup-actions">
+          <button class="btn-popup-inspect" onclick="openCommunityDrawer('${escapeHtml(c.city)}')">
+            Inspect ${c.total_jobs} ${c.total_jobs === 1 ? 'Opportunity' : 'Opportunities'} &rarr;
+          </button>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupHtml, { maxWidth: 320 });
+    marker.on('click', () => {
+      openCommunityDrawer(c.city);
+    });
+
+    mapMarkersLayer.addLayer(marker);
+  });
+
+  // Fit bounds if filtered to a specific corridor
+  if (corridorFilter !== 'All' && bounds.length > 0) {
+    realTimeMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+  }
+}
+
+// Window-accessible function for popup button click
+window.openCommunityDrawer = function(cityName) {
+  const drawer = document.getElementById('map-community-drawer');
+  const drawerName = document.getElementById('drawer-community-name');
+  const drawerMeta = document.getElementById('drawer-community-meta');
+  const drawerBadge = document.getElementById('drawer-corridor-badge');
+  const jobsContainer = document.getElementById('drawer-jobs-container');
+
+  if (!drawer || !jobsContainer) return;
+
+  const communityJobs = allMapJobs.filter(
+    (j) => j.city && j.city.toLowerCase() === cityName.toLowerCase()
+  );
+
+  const commData = allMapCommunities.find(
+    (c) => c.city.toLowerCase() === cityName.toLowerCase()
+  ) || {};
+
+  if (drawerName) drawerName.innerText = cityName;
+  if (drawerBadge) drawerBadge.innerText = commData.corridor || 'Ontario';
+  if (drawerMeta) {
+    const distText = commData.distance_from_toronto_km ? `${Math.round(commData.distance_from_toronto_km)} km from Toronto` : 'Central Ontario';
+    const nrrriText = commData.nrrri_incentive_amount ? ` • 🎁 Potential NRRRI Grant: $${commData.nrrri_incentive_amount.toLocaleString()} CAD` : '';
+    const proText = commData.pro_ros_status ? ` • ${commData.pro_ros_status}` : '';
+    drawerMeta.innerText = `${distText}${nrrriText}${proText}`;
+  }
+
+  drawer.style.display = 'block';
+  drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  jobsContainer.innerHTML = '';
+  if (communityJobs.length === 0) {
+    jobsContainer.innerHTML = `
+      <div style="padding: 20px; color: var(--text-muted); text-align: center; grid-column: 1 / -1;">
+        No active job postings currently listed in ${escapeHtml(cityName)}.
+      </div>
+    `;
+    return;
+  }
+
+  communityJobs.forEach((job) => {
+    const card = document.createElement('div');
+    card.className = 'drawer-job-card';
+
+    const grossText = job.annualized_salary > 0
+      ? `$${job.annualized_salary.toLocaleString()} CAD / yr gross`
+      : `${job.physician_split_pct || 75}/${100 - (job.physician_split_pct || 75)} FFS Split`;
+
+    const nrrriBadge = job.nrrri_incentive_amount > 0
+      ? `<span class="grant-pill grant-tier-1" style="font-size: 0.7rem;">🎁 $${job.nrrri_incentive_amount.toLocaleString()} NRRRI Grant</span>`
+      : '';
+
+    card.innerHTML = `
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.3;">${escapeHtml(job.title)}</h4>
+          ${nrrriBadge}
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">
+          <strong>${escapeHtml(job.company || 'Modern Practice')}</strong> • ${escapeHtml(job.specialty)} • ${escapeHtml(job.employment_type || 'full-time')}
+        </p>
+        <p style="font-size: 0.84rem; font-weight: 800; color: #059669; margin-bottom: 8px;">
+          ${grossText}
+        </p>
+        <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+          ${escapeHtml(job.description_summary || 'Turnkey practice environment with EMR support and dedicated administrative staff.')}
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="openJobDetailsModal('${escapeHtml(job.job_id)}')">
+          View In-App Dossier
+        </button>
+      </div>
+    `;
+
+    jobsContainer.appendChild(card);
+  });
+};
+
+async function triggerAutomatedScraper() {
+  const btn = document.getElementById('btn-trigger-scraper');
+  const spinIcon = document.getElementById('scraper-spin-icon');
+  const btnText = document.getElementById('scraper-btn-text');
+
+  if (spinIcon) spinIcon.classList.add('is-spinning');
+  if (btnText) btnText.innerText = 'Syncing Live...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/scraper/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+
+    showToast('Autonomous Regional Scraper triggered in background. Polling live status...', 'info');
+
+    // Poll status every 3s
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await fetch('/api/scraper/status');
+        const status = await statusRes.json();
+
+        if (!status.running) {
+          clearInterval(pollInterval);
+          if (spinIcon) spinIcon.classList.remove('is-spinning');
+          if (btnText) btnText.innerText = 'Sync Live Postings';
+          if (btn) btn.disabled = false;
+
+          showToast('Sync complete! Regional map and dataset updated with live postings.', 'success');
+          await loadRealTimeMapData();
+        }
+      } catch (pollErr) {
+        clearInterval(pollInterval);
+        if (spinIcon) spinIcon.classList.remove('is-spinning');
+        if (btnText) btnText.innerText = 'Sync Live Postings';
+        if (btn) btn.disabled = false;
+      }
+    }, 3000);
+  } catch (err) {
+    if (spinIcon) spinIcon.classList.remove('is-spinning');
+    if (btnText) btnText.innerText = 'Sync Live Postings';
+    if (btn) btn.disabled = false;
+    showToast(`Failed to trigger scraper: ${err.message}`, 'error');
+  }
+}
+
 
