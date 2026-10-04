@@ -62,9 +62,35 @@ jobs:
         if: steps.check-run.outputs.should_run == 'true'
         run: npm ci
 
-      - name: Scrape ${{ matrix.corridor }} & Sync to Supabase
+      - name: Scrape ${{ matrix.corridor }} & Sync to Supabase (with 3x Retry)
         if: steps.check-run.outputs.should_run == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          node src/corridor_scraper.js --corridor="${{ matrix.corridor }}"
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          SUCCESS=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT+1))
+            echo "=========================================================="
+            echo "🚀 [Attempt $RETRY_COUNT/$MAX_RETRIES] Scraping ${{ matrix.corridor }}..."
+            echo "=========================================================="
+            
+            if node src/corridor_scraper.js --corridor="${{ matrix.corridor }}"; then
+              echo "✅ Successfully completed ${{ matrix.corridor }} on attempt $RETRY_COUNT"
+              SUCCESS=1
+              break
+            else
+              echo "⚠️ Attempt $RETRY_COUNT failed for ${{ matrix.corridor }}."
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Sleeping 15 seconds before retry $RETRY_COUNT..."
+                sleep 15
+              fi
+            fi
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "❌ All $MAX_RETRIES attempts exhausted for ${{ matrix.corridor }}."
+            exit 1
+          fi

@@ -107,7 +107,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function httpsGet(url, retries = 2, timeoutMs = 8000) {
+/**
+ * Robust HTTP GET with 3x retry mechanism and exponential backoff
+ * Retries on network errors, socket timeouts, rate limits (429), and server errors (5xx)
+ */
+function httpsGet(url, retries = 3, timeoutMs = 10000, attempt = 1) {
   return new Promise((resolve) => {
     try {
       const req = https.get(
@@ -120,22 +124,42 @@ function httpsGet(url, retries = 2, timeoutMs = 8000) {
             'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
           },
         },
-        (res) => {
+        async (res) => {
           let data = '';
           res.on('data', (chunk) => (data += chunk));
-          res.on('end', () => resolve({ statusCode: res.statusCode, body: data }));
-          res.on('error', (err) => resolve({ statusCode: 500, body: '', error: err.message }));
+          res.on('end', async () => {
+            // Retry on transient 429 (rate limiting) or 5xx (server error)
+            if ((res.statusCode === 429 || res.statusCode >= 500) && retries > 0) {
+              const backoffMs = Math.min(3500, attempt * 700 + Math.floor(Math.random() * 250));
+              await sleep(backoffMs);
+              const next = await httpsGet(url, retries - 1, timeoutMs, attempt + 1);
+              resolve(next);
+            } else {
+              resolve({ statusCode: res.statusCode, body: data });
+            }
+          });
+          res.on('error', async (err) => {
+            if (retries > 0) {
+              const backoffMs = Math.min(3500, attempt * 700 + Math.floor(Math.random() * 250));
+              await sleep(backoffMs);
+              const next = await httpsGet(url, retries - 1, timeoutMs, attempt + 1);
+              resolve(next);
+            } else {
+              resolve({ statusCode: 500, body: '', error: err.message });
+            }
+          });
         }
       );
 
       req.setTimeout(timeoutMs, () => {
-        req.destroy();
+        req.destroy(new Error(`Request timeout after ${timeoutMs}ms`));
       });
 
       req.on('error', async (err) => {
         if (retries > 0) {
-          await sleep(300);
-          const next = await httpsGet(url, retries - 1, timeoutMs);
+          const backoffMs = Math.min(3500, attempt * 700 + Math.floor(Math.random() * 250));
+          await sleep(backoffMs);
+          const next = await httpsGet(url, retries - 1, timeoutMs, attempt + 1);
           resolve(next);
         } else {
           resolve({ statusCode: 500, body: '', error: err.message });
@@ -152,12 +176,19 @@ function parseCardFromHtml(cardHtml, href) {
   const startsMatch = text.match(/Starts\s*(\d{4}-\d{2}-\d{2})/i);
   const startDate = startsMatch ? startsMatch[1] : null;
 
-  const idMatch = href.match(/([a-f0-9]{24})(?:[/?#]|$)/i);
-  const jobId = idMatch ? idMatch[1] : null;
+  // Canonicalize URL by stripping query parameters (?city=..., ?specialty=...) and trailing slashes
+  const cleanHref = href.split('?')[0].replace(/\/+$/, '');
+  const idMatch = cleanHref.match(/([a-f0-9]{24})(?:[/?#]|$)/i);
+  let jobId = idMatch ? idMatch[1] : null;
+
+  if (!jobId) {
+    const crypto = require('crypto');
+    jobId = crypto.createHash('md5').update(cleanHref).digest('hex').slice(0, 24);
+  }
 
   return {
     job_id: jobId,
-    href: href.startsWith('http') ? href : `https://physiciancareers.ca${href}`,
+    href: cleanHref.startsWith('http') ? cleanHref : `https://physiciancareers.ca${cleanHref}`,
     startDate,
     rawCardText: text,
   };
@@ -290,8 +321,9 @@ async function scrapeCorridors(options = {}) {
         const href = match[1];
         if (!href || href === '/' || href.includes('undefined')) continue;
         const cardData = parseCardFromHtml(match[2], href);
-        if (!uniqueJobUrls.has(cardData.href)) {
-          uniqueJobUrls.set(cardData.href, { card: cardData, cityName, locInfo });
+        // Deduplicate candidates in-memory by unique canonical job_id
+        if (!uniqueJobUrls.has(cardData.job_id)) {
+          uniqueJobUrls.set(cardData.job_id, { card: cardData, cityName, locInfo });
           count++;
         }
       }
@@ -310,7 +342,7 @@ async function scrapeCorridors(options = {}) {
 
   const activeJobs = [];
   let expiredCount = 0;
-  let idx = 0;
+  let failedFetchCount = 0;
 
   const entries = Array.from(uniqueJobUrls.entries());
   const batchSize = 4;
@@ -318,15 +350,38 @@ async function scrapeCorridors(options = {}) {
   for (let b = 0; b < entries.length; b += batchSize) {
     const batch = entries.slice(b, b + batchSize);
     await Promise.all(
-      batch.map(async ([url, { card, cityName, locInfo }]) => {
+      batch.map(async ([jobId, { card, cityName, locInfo }]) => {
         try {
-          const detailRes = await httpsGet(url);
-          if (detailRes.statusCode !== 200) return;
+          // 3x Retry Mechanism for Individual Job Detail Fetch
+          let detailRes = null;
+          let jobAttempt = 0;
+          const maxJobRetries = 3;
 
-          const detail = extractDetailFromHtml(detailRes.body, url, 'Family Medicine');
+          while (jobAttempt < maxJobRetries) {
+            jobAttempt++;
+            try {
+              detailRes = await httpsGet(card.href, 2, 10000);
+              if (detailRes && detailRes.statusCode === 200 && detailRes.body) {
+                break; // Succeeded
+              }
+            } catch (fetchErr) {
+              // Retry on network error
+            }
+            if (jobAttempt < maxJobRetries) {
+              await sleep(jobAttempt * 400); // 400ms, 800ms backoff
+            }
+          }
+
+          if (!detailRes || detailRes.statusCode !== 200 || !detailRes.body) {
+            logger.warn(`[RETRY EXHAUSTED] Job ${jobId} failed after ${maxJobRetries} attempts: ${card.href}`);
+            failedFetchCount++;
+            return;
+          }
+
+          const detail = extractDetailFromHtml(detailRes.body, card.href, 'Family Medicine');
           const combined = {
             job_id: card.job_id,
-            url,
+            url: card.href,
             title: detail.title,
             specialty: detail.specialty,
             employment_type: detail.employment_type,
@@ -379,31 +434,67 @@ async function scrapeCorridors(options = {}) {
           activeJobs.push(normalized);
           logger.success(`  [ACTIVE] "${normalized.title}" in ${cityName} (${locInfo.corridor}) | NRRRI: ${locInfo.nrrri ? '$' + locInfo.nrrri.toLocaleString() : 'N/A'}`);
         } catch (err) {
-          logger.warn(`Failed to process ${url}: ${err.message}`);
+          logger.warn(`Failed to process job ${jobId} (${card.href}): ${err.message}`);
+          failedFetchCount++;
         }
       })
     );
     await sleep(200); // 200ms polite throttle between batches
   }
 
+  // ---------------------------------------------------------------------------
+  // Semantic Deduplication Engine (Zero Duplicates Guarantee)
+  // When an employer reposts the exact same job on multiple dates,
+  // we retain ONLY the NEWEST active posting and prune older duplicate reposts.
+  // ---------------------------------------------------------------------------
+  const dedupedJobsMap = new Map();
+  let duplicateRepostCount = 0;
+
+  for (const job of activeJobs) {
+    const fp = `${(job.title || '').trim()}::${(job.company || '').trim()}::${(job.city || '').trim()}::${(job.specialty || '').trim()}`.toLowerCase();
+    
+    if (!dedupedJobsMap.has(fp)) {
+      dedupedJobsMap.set(fp, job);
+    } else {
+      const existing = dedupedJobsMap.get(fp);
+      const existingDate = existing.posted_date || existing.start_date || '1970-01-01';
+      const newDate = job.posted_date || job.start_date || '1970-01-01';
+      
+      if (newDate > existingDate) {
+        dedupedJobsMap.set(fp, job); // Keep newer posting
+      }
+      duplicateRepostCount++;
+    }
+  }
+
+  const finalActiveJobs = Array.from(dedupedJobsMap.values());
+  if (duplicateRepostCount > 0) {
+    logger.info(`🧹 Semantic Deduplication: Filtered out ${duplicateRepostCount} duplicate reposts. Retained ${finalActiveJobs.length} pristine unique listings.`);
+  }
+
   logger.info('================================================================');
   logger.success(`Scraping Complete in ${Math.round((Date.now() - startTime) / 1000)}s`);
-  logger.info(`Total Evaluated: ${uniqueJobUrls.size} | Expired Pruned: ${expiredCount} | Active Retained: ${activeJobs.length}`);
+  logger.info(`Total Evaluated: ${uniqueJobUrls.size} | Expired Pruned: ${expiredCount} | Duplicates Removed: ${duplicateRepostCount} | Active Retained: ${finalActiveJobs.length}`);
+  if (failedFetchCount > 0) {
+    logger.warn(`Jobs Failed After 3 Retries: ${failedFetchCount}`);
+  }
   logger.info('================================================================');
 
-  // Database Persistence with Bulletproof Manual Protection
+  // Database Persistence with Bulletproof Manual Protection & Deduplication
   if (options.persistDb !== false && process.env.DATABASE_URL) {
-    await persistToDatabase(activeJobs);
+    await persistToDatabase(finalActiveJobs);
   }
 
   // Update local fallback dataset
-  updateLocalJsonFallback(activeJobs, expiredCount);
+  updateLocalJsonFallback(finalActiveJobs, expiredCount + duplicateRepostCount);
 
   return {
     total_evaluated: uniqueJobUrls.size,
     expired_pruned: expiredCount,
-    active_retained: activeJobs.length,
-    jobs: activeJobs,
+    duplicates_removed: duplicateRepostCount,
+    failed_after_retries: failedFetchCount,
+    active_retained: finalActiveJobs.length,
+    jobs: finalActiveJobs,
   };
 }
 
@@ -421,10 +512,14 @@ async function persistToDatabase(jobs) {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
+    max: 1,
+    connectionTimeoutMillis: 10000,
   });
 
+  let client = null;
   try {
-    logger.info('Syncing to Supabase PostgreSQL with Manual Entry Protection...');
+    client = await pool.connect();
+    logger.info('Syncing to Supabase PostgreSQL with Manual Entry Protection & Deduplication...');
 
     let insertedCount = 0;
     for (const job of jobs) {
@@ -506,15 +601,31 @@ async function persistToDatabase(jobs) {
           job.pro_ros_status,
         ];
 
-        await pool.query(insertSql, values);
-        insertedCount++;
-      } catch (jobErr) {
-        logger.warn(`Could not sync job ${job.job_id} (${job.title}): ${jobErr.message}`);
+        let insertSuccess = false;
+        let dbAttempt = 0;
+        const maxDbRetries = 3;
+
+        while (!insertSuccess && dbAttempt < maxDbRetries) {
+          dbAttempt++;
+          try {
+            await client.query(insertSql, values);
+            insertSuccess = true;
+            insertedCount++;
+          } catch (jobErr) {
+            if (dbAttempt >= maxDbRetries) {
+              logger.warn(`Could not sync job ${job.job_id} after ${maxDbRetries} attempts (${job.title}): ${jobErr.message}`);
+            } else {
+              await sleep(dbAttempt * 400); // 400ms, 800ms backoff
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn(`Error preparing job ${job.job_id}: ${err.message}`);
       }
     }
 
     // Automated Stale Pruning in Database: ONLY prune scraped jobs (NEVER manual)
-    const pruneRes = await pool.query(`
+    const pruneRes = await client.query(`
       UPDATE jobs 
       SET is_expired = TRUE 
       WHERE is_manual IS NOT TRUE 
@@ -522,10 +633,33 @@ async function persistToDatabase(jobs) {
           OR (closing_date IS NOT NULL AND closing_date < CURRENT_DATE));
     `);
 
-    logger.success(`Database sync complete: ${insertedCount} jobs upserted. ${pruneRes.rowCount} stale scraped jobs marked expired.`);
+    // Automated Semantic Deduplication in Database:
+    // When employers repost the exact same title/company/city, mark older duplicate copies as is_expired = TRUE
+    const dedupRes = await client.query(`
+      WITH ranked_dupes AS (
+        SELECT job_id,
+               ROW_NUMBER() OVER (
+                 PARTITION BY LOWER(TRIM(title)), LOWER(TRIM(company)), LOWER(TRIM(city)), LOWER(TRIM(specialty))
+                 ORDER BY posted_date DESC NULLS LAST, scraped_at DESC
+               ) as rn
+        FROM jobs
+        WHERE is_manual IS NOT TRUE
+      )
+      UPDATE jobs
+      SET is_expired = TRUE
+      WHERE job_id IN (
+        SELECT job_id FROM ranked_dupes WHERE rn > 1
+      ) AND is_manual IS NOT TRUE;
+    `);
+
+    if (dedupRes.rowCount > 0) {
+      logger.info(`🧹 Semantic Deduplication in DB: Marked ${dedupRes.rowCount} older duplicate reposts as expired.`);
+    }
+
+    logger.success(`Database sync complete: ${insertedCount} jobs upserted. ${pruneRes.rowCount} stale jobs & ${dedupRes.rowCount} duplicate reposts marked expired.`);
 
     // Record scraping execution log
-    await pool.query(`
+    await client.query(`
       INSERT INTO scraping_runs (target_city, specialties_scraped, total_jobs_scraped, status, finished_at)
       VALUES ($1, $2, $3, $4, NOW());
     `, ['Ontario Corridors', 6, insertedCount, 'COMPLETED']);
@@ -533,6 +667,7 @@ async function persistToDatabase(jobs) {
   } catch (err) {
     logger.error(`Database persistence error: ${err.message}`);
   } finally {
+    if (client) client.release();
     await pool.end();
   }
 }

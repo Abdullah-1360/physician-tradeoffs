@@ -11,7 +11,7 @@
   "manual_jobs_count": 0,
   "scraped_jobs_count": 305,
   "pruned_expired_count": 7,
-  "generated_at": "2026-10-04T17:31:48.331Z",
+  "generated_at": "2026-10-04T17:45:40.659Z",
   "jobs": [
     {
       "job_id": "6a9901305ffbbbfeb620c0f1",
@@ -21746,7 +21746,7 @@
           "value": "6a76bd72bfdb235d5f56ddc6"
         }
       },
-      "scraped_at": "2026-10-04T17:31:20.244Z",
+      "scraped_at": "2026-10-04T17:45:10.354Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -21827,7 +21827,7 @@
           "value": "6a76bd72bfdb235d5f56dd93"
         }
       },
-      "scraped_at": "2026-10-04T17:31:20.582Z",
+      "scraped_at": "2026-10-04T17:45:10.893Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -21909,7 +21909,7 @@
           "value": "6a76bd72bfdb235d5f56dda4"
         }
       },
-      "scraped_at": "2026-10-04T17:31:20.657Z",
+      "scraped_at": "2026-10-04T17:45:10.755Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -21991,7 +21991,7 @@
           "value": "6a76bd72bfdb235d5f56ddb8"
         }
       },
-      "scraped_at": "2026-10-04T17:31:20.731Z",
+      "scraped_at": "2026-10-04T17:45:10.724Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22074,7 +22074,7 @@
           "value": "6a76bd72bfdb235d5f56dd78"
         }
       },
-      "scraped_at": "2026-10-04T17:31:22.774Z",
+      "scraped_at": "2026-10-04T17:45:14.515Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22154,7 +22154,7 @@
           "value": "6a76bd71bfdb235d5f56dcff"
         }
       },
-      "scraped_at": "2026-10-04T17:31:22.801Z",
+      "scraped_at": "2026-10-04T17:45:14.513Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22237,7 +22237,7 @@
           "value": "6a02b65376abc2c85cbbb8c7"
         }
       },
-      "scraped_at": "2026-10-04T17:31:22.808Z",
+      "scraped_at": "2026-10-04T17:45:14.474Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22319,7 +22319,7 @@
           "value": "6a76bd71bfdb235d5f56dcfa"
         }
       },
-      "scraped_at": "2026-10-04T17:31:22.831Z",
+      "scraped_at": "2026-10-04T17:45:14.509Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22401,7 +22401,7 @@
           "value": "6a7021e0996e67ca9917440f"
         }
       },
-      "scraped_at": "2026-10-04T17:31:25.386Z",
+      "scraped_at": "2026-10-04T17:45:16.839Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22481,7 +22481,7 @@
           "value": "6a507e7edf36206c308645cc"
         }
       },
-      "scraped_at": "2026-10-04T17:31:25.398Z",
+      "scraped_at": "2026-10-04T17:45:16.347Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22561,7 +22561,7 @@
           "value": "6a5321c0df36206c308be9e4"
         }
       },
-      "scraped_at": "2026-10-04T17:31:25.406Z",
+      "scraped_at": "2026-10-04T17:45:16.938Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22640,7 +22640,7 @@
           "value": "6a61a3e1df36206c30a56f47"
         }
       },
-      "scraped_at": "2026-10-04T17:31:25.470Z",
+      "scraped_at": "2026-10-04T17:45:16.337Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22720,7 +22720,7 @@
           "value": "6a62f4d6df36206c30a7fac9"
         }
       },
-      "scraped_at": "2026-10-04T17:31:29.998Z",
+      "scraped_at": "2026-10-04T17:45:21.556Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22802,7 +22802,7 @@
           "value": "6a62f4d6df36206c30a7fabf"
         }
       },
-      "scraped_at": "2026-10-04T17:31:32.260Z",
+      "scraped_at": "2026-10-04T17:45:23.638Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22878,7 +22878,7 @@
           "value": "6a62f4d6df36206c30a7faba"
         }
       },
-      "scraped_at": "2026-10-04T17:31:32.274Z",
+      "scraped_at": "2026-10-04T17:45:23.645Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -22957,7 +22957,7 @@
           "value": "6a62f4d6df36206c30a7fac4"
         }
       },
-      "scraped_at": "2026-10-04T17:31:32.278Z",
+      "scraped_at": "2026-10-04T17:45:23.609Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23037,7 +23037,7 @@
           "value": "6a62f4d6df36206c30a7fab5"
         }
       },
-      "scraped_at": "2026-10-04T17:31:32.283Z",
+      "scraped_at": "2026-10-04T17:45:23.622Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23117,7 +23117,7 @@
           "value": "6a62f4d6df36206c30a7faab"
         }
       },
-      "scraped_at": "2026-10-04T17:31:34.578Z",
+      "scraped_at": "2026-10-04T17:45:25.714Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23197,7 +23197,7 @@
           "value": "6a62f4d6df36206c30a7fab0"
         }
       },
-      "scraped_at": "2026-10-04T17:31:34.586Z",
+      "scraped_at": "2026-10-04T17:45:25.711Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23277,7 +23277,7 @@
           "value": "6a62f4d6df36206c30a7faa6"
         }
       },
-      "scraped_at": "2026-10-04T17:31:34.596Z",
+      "scraped_at": "2026-10-04T17:45:25.733Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23355,7 +23355,7 @@
           "value": "6a62f4d6df36206c30a7faa1"
         }
       },
-      "scraped_at": "2026-10-04T17:31:34.603Z",
+      "scraped_at": "2026-10-04T17:45:26.172Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23436,7 +23436,7 @@
           "value": "6a62f4d6df36206c30a7fa8d"
         }
       },
-      "scraped_at": "2026-10-04T17:31:36.694Z",
+      "scraped_at": "2026-10-04T17:45:28.411Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23516,7 +23516,7 @@
           "value": "6a62f4d6df36206c30a7fa9c"
         }
       },
-      "scraped_at": "2026-10-04T17:31:36.699Z",
+      "scraped_at": "2026-10-04T17:45:28.302Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23596,7 +23596,7 @@
           "value": "6a62f4d6df36206c30a7fa92"
         }
       },
-      "scraped_at": "2026-10-04T17:31:36.709Z",
+      "scraped_at": "2026-10-04T17:45:28.434Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23677,7 +23677,7 @@
           "value": "6a62f4d6df36206c30a7fa97"
         }
       },
-      "scraped_at": "2026-10-04T17:31:36.825Z",
+      "scraped_at": "2026-10-04T17:45:28.578Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23755,7 +23755,7 @@
           "value": "6a62f4d5df36206c30a7fa6a"
         }
       },
-      "scraped_at": "2026-10-04T17:31:38.902Z",
+      "scraped_at": "2026-10-04T17:45:30.578Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23833,7 +23833,7 @@
           "value": "6a62f4d6df36206c30a7fa88"
         }
       },
-      "scraped_at": "2026-10-04T17:31:38.914Z",
+      "scraped_at": "2026-10-04T17:45:30.462Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23913,7 +23913,7 @@
           "value": "6a62f4d5df36206c30a7fa79"
         }
       },
-      "scraped_at": "2026-10-04T17:31:38.926Z",
+      "scraped_at": "2026-10-04T17:45:30.456Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -23991,7 +23991,7 @@
           "value": "6a62f4d6df36206c30a7fa83"
         }
       },
-      "scraped_at": "2026-10-04T17:31:38.945Z",
+      "scraped_at": "2026-10-04T17:45:30.536Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -24072,7 +24072,7 @@
           "value": "6a62f4d5df36206c30a7fa60"
         }
       },
-      "scraped_at": "2026-10-04T17:31:39.934Z",
+      "scraped_at": "2026-10-04T17:45:32.162Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
@@ -24153,7 +24153,7 @@
           "value": "6a62f4d5df36206c30a7fa57"
         }
       },
-      "scraped_at": "2026-10-04T17:31:40.515Z",
+      "scraped_at": "2026-10-04T17:45:31.940Z",
       "corridor": "Northeast Corridor",
       "pro_ros_status": "NURC",
       "nrrri_incentive_amount": 110000,
