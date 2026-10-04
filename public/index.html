@@ -14,6 +14,9 @@
   <!-- Leaflet CSS & JS for Real-Time Geospatial Opportunity Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -228,23 +231,23 @@
               <div class="form-group">
                 <label for="finder-specialty-select">Medical Specialty Filter</label>
                 <select id="finder-specialty-select" class="form-control">
-                  <option value="All">All Specialties (Full Market)</option>
-                  <option value="Family Medicine">Family Medicine</option>
-                  <option value="Dermatology" selected>Dermatology</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Internal Medicine">Internal Medicine</option>
-                  <option value="Psychiatry">Psychiatry</option>
-                  <option value="Emergency Medicine">Emergency Medicine</option>
+                  <option value="All" selected>All Specialties (340 Live Postings)</option>
+                  <option value="Family Medicine">Family Medicine (311 Live Postings)</option>
+                  <option value="Pediatrics">Pediatrics (12 Live Postings)</option>
+                  <option value="Internal Medicine">Internal Medicine (9 Live Postings)</option>
+                  <option value="Psychiatry">Psychiatry (5 Live Postings)</option>
+                  <option value="Neurology">Neurology (2 Live Postings)</option>
+                  <option value="Radiation Oncology">Radiation Oncology (1 Live Posting)</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label for="finder-radius-select">Maximum Commute Radius</label>
+                <label for="finder-radius-select">Regional Search Radius (Distance from Origin)</label>
                 <select id="finder-radius-select" class="form-control">
                   <option value="15">Within 15 km (Local GTA)</option>
                   <option value="25">Within 25 km (Regional Corridor)</option>
                   <option value="40" selected>Within 40 km (Greater Golden Horseshoe)</option>
-                  <option value="60">Within 60 km (Extended Commute)</option>
+                  <option value="60">Within 60 km (Extended Region)</option>
                 </select>
               </div>
             </div>
@@ -256,7 +259,7 @@
                   <label for="finder-gross-input">
                     <span>Current Annual Gross ($ CAD)</span>
                   </label>
-                  <input type="number" id="finder-gross-input" class="form-control" value="550000" step="10000">
+                  <input type="number" id="finder-gross-input" class="form-control" value="420000" step="10000">
                 </div>
 
                 <div class="form-group">
@@ -272,7 +275,7 @@
                 <select id="finder-goal-select" class="form-control">
                   <option value="balanced" selected>🎯 Highest Overall Opportunity</option>
                   <option value="gross_profit">💰 Maximum Gross Income Advantage ($ CAD)</option>
-                  <option value="proximity">📍 Nearest Location (Minimal Commute)</option>
+                  <option value="proximity">📍 Nearest Location (Closest Proximity)</option>
                 </select>
               </div>
 
@@ -297,11 +300,11 @@
             <div class="baseline-stats-strip">
               <div class="baseline-stat-item">
                 <span class="bstat-label">Specialty</span>
-                <span class="bstat-val" id="baseline-stat-specialty">Dermatology</span>
+                <span class="bstat-val" id="baseline-stat-specialty">All Specialties (Full Market)</span>
               </div>
               <div class="baseline-stat-item highlight-emerald">
                 <span class="bstat-label">Current Annual Gross</span>
-                <span class="bstat-val" id="baseline-stat-gross">$550,000 CAD</span>
+                <span class="bstat-val" id="baseline-stat-gross">$420,000 CAD</span>
               </div>
               <div class="baseline-stat-item">
                 <span class="bstat-label">Billing Split</span>
@@ -339,9 +342,9 @@
             <div class="kpi-card">
               <div class="kpi-icon icon-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
               <div class="kpi-meta">
-                <span class="kpi-label">Average Commute</span>
+                <span class="kpi-label">Average Distance</span>
                 <span class="kpi-value" id="finder-kpi-avg-dist">--</span>
-                <span class="kpi-subtext">One-way drive in GTA</span>
+                <span class="kpi-subtext">km from selected origin</span>
               </div>
             </div>
           </div>
@@ -350,8 +353,8 @@
           <div class="card-section">
             <div class="card-header">
               <div>
-                <h3>Gross Income vs. Commute Distance Frontier</h3>
-                <p class="card-subtitle">Visualizing verified clinics: Estimated Gross Annual Billings relative to distance from your origin.</p>
+                <h3>Gross Billings vs. Regional Distance Frontier</h3>
+                <p class="card-subtitle">Visualizing verified clinics: Estimated Gross Annual Billings relative to regional distance (km) from your anchor origin.</p>
               </div>
               <span class="badge-tag">Interactive Opportunity Frontier</span>
             </div>
@@ -360,23 +363,23 @@
             </div>
           </div>
 
-          <!-- Autonomous AI Clinical Career Reasoning Accordion -->
+          <!-- Regional Practice & Grant Intelligence Summary -->
           <div class="ai-thinking-card glass-card" id="ai-thinking-card" style="display: none;">
             <div class="ai-thinking-header" id="ai-thinking-toggle">
               <div class="ai-header-left">
-                <span class="ai-brain-pulse">🧠</span>
+                <span class="ai-brain-pulse">📊</span>
                 <div>
-                  <h4 class="ai-thinking-title">AI Autonomous Diagnostic Thinking Process</h4>
-                  <p class="ai-thinking-subtitle">Real-time multi-dimensional clinical reasoning engine analyzing market arbitrage, provincial grants, and transit physics.</p>
+                  <h4 class="ai-thinking-title">Regional Compensation & Strategic Practice Analysis</h4>
+                  <p class="ai-thinking-subtitle">Verified market gross billings, provincial return-of-service grants (NRRRI), and clinic overhead split terms.</p>
                 </div>
               </div>
               <button class="ai-toggle-btn" id="ai-thinking-btn" type="button">
-                <span id="ai-toggle-btn-text">View Diagnostic Breakdown</span>
+                <span id="ai-toggle-btn-text">View Detailed Practice Breakdown</span>
                 <svg id="ai-toggle-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
               </button>
             </div>
             <div class="ai-thinking-body" id="ai-thinking-body" style="display: none;">
-              <!-- 5 Diagnostic Steps rendered dynamically by app.js -->
+              <!-- Practice Analysis Steps rendered dynamically by app.js -->
             </div>
           </div>
 

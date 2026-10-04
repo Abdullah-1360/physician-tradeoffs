@@ -611,7 +611,9 @@ app.get('/api/map/summary', (req, res) => {
 
   memoryJobs.forEach((j) => {
     const c = j.corridor || 'GTA Core';
-    const city = j.city || 'Toronto';
+    let city = (j.city || 'Toronto').trim();
+    // Normalize city names to clean title case
+    city = city.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
     if (!corridorStats[c]) {
       corridorStats[c] = { total_jobs: 0, salary_sum: 0, salary_count: 0, pro_count: 0, max_nrrri: 0, communities: new Set() };
@@ -620,26 +622,28 @@ app.get('/api/map/summary', (req, res) => {
     corridorStats[c].total_jobs++;
     corridorStats[c].communities.add(city);
 
-    if (j.annualized_salary > 0) {
-      corridorStats[c].salary_sum += j.annualized_salary;
+    const salaryVal = parseFloat(j.annualized_salary) || 0;
+    if (salaryVal > 0) {
+      corridorStats[c].salary_sum += salaryVal;
       corridorStats[c].salary_count++;
     }
     if (j.pro_ros_status && j.pro_ros_status.includes('PRO')) {
       corridorStats[c].pro_count++;
     }
-    if (j.nrrri_incentive_amount > corridorStats[c].max_nrrri) {
-      corridorStats[c].max_nrrri = j.nrrri_incentive_amount;
+    const nrrriVal = parseFloat(j.nrrri_incentive_amount) || 0;
+    if (nrrriVal > corridorStats[c].max_nrrri) {
+      corridorStats[c].max_nrrri = nrrriVal;
     }
 
     if (!communityMap[city]) {
       communityMap[city] = {
         city,
         corridor: c,
-        latitude: j.latitude,
-        longitude: j.longitude,
-        distance_from_toronto_km: j.distance_from_toronto_km,
+        latitude: parseFloat(j.latitude),
+        longitude: parseFloat(j.longitude),
+        distance_from_toronto_km: parseFloat(j.distance_from_toronto_km) || 0,
         pro_ros_status: j.pro_ros_status || 'PRO Possible',
-        nrrri_incentive_amount: j.nrrri_incentive_amount || 0,
+        nrrri_incentive_amount: nrrriVal,
         total_jobs: 0,
         salary_sum: 0,
         salary_count: 0,
@@ -649,10 +653,13 @@ app.get('/api/map/summary', (req, res) => {
     }
 
     communityMap[city].total_jobs++;
-    if (j.annualized_salary > 0) {
-      communityMap[city].salary_sum += j.annualized_salary;
+    if (salaryVal > 0) {
+      communityMap[city].salary_sum += salaryVal;
       communityMap[city].salary_count++;
       communityMap[city].avg_gross_salary = Math.round(communityMap[city].salary_sum / communityMap[city].salary_count);
+    }
+    if (nrrriVal > communityMap[city].nrrri_incentive_amount) {
+      communityMap[city].nrrri_incentive_amount = nrrriVal;
     }
     if (communityMap[city].sample_jobs.length < 5) {
       communityMap[city].sample_jobs.push({
@@ -660,8 +667,8 @@ app.get('/api/map/summary', (req, res) => {
         title: j.title,
         specialty: j.specialty,
         company: j.company,
-        annualized_salary: j.annualized_salary,
-        nrrri_incentive_amount: j.nrrri_incentive_amount,
+        annualized_salary: salaryVal > 0 ? salaryVal : null,
+        nrrri_incentive_amount: nrrriVal > 0 ? nrrriVal : null,
       });
     }
   });

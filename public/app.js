@@ -842,12 +842,14 @@ function initOpportunityFinder() {
 
   // Specialty baseline gross approximations
   const specialtyGrossMap = {
-    'All': 450000,
+    'All': 420000,
     'Family Medicine': 385000,
-    'Dermatology': 550000,
     'Pediatrics': 395000,
     'Internal Medicine': 460000,
     'Psychiatry': 440000,
+    'Neurology': 480000,
+    'Radiation Oncology': 520000,
+    'Dermatology': 550000,
     'Emergency Medicine': 420000
   };
 
@@ -909,7 +911,7 @@ async function runOpportunitySimulation() {
   const payload = {
     origin: originInput.value || 'Downtown Toronto',
     specialty: specialtySelect ? specialtySelect.value : 'All',
-    currentGross: grossInput ? parseFloat(grossInput.value) : 550000,
+    currentGross: grossInput ? parseFloat(grossInput.value) : 420000,
     currentSplit: splitInput ? parseFloat(splitInput.value) : 70,
     maxDistanceKm: radiusSelect ? parseFloat(radiusSelect.value) : 40,
     optimizationGoal: goalSelect ? goalSelect.value : 'balanced'
@@ -1028,8 +1030,8 @@ function renderOpportunityResults(data) {
     }
 
     thinkingBody.innerHTML = `
-      <div style="background: rgba(124, 58, 237, 0.06); padding: 14px 18px; border-radius: 10px; border-left: 4px solid #7c3aed; margin-bottom: 12px;">
-        <strong style="color: #4c1d95; font-size: 0.92rem;">🤖 Autonomous Strategic Verdict:</strong>
+      <div style="background: rgba(2, 132, 199, 0.08); padding: 14px 18px; border-radius: 10px; border-left: 4px solid #0284c7; margin-bottom: 12px;">
+        <strong style="color: #0369a1; font-size: 0.92rem;">📊 Practice Transition Summary:</strong>
         <p style="font-size: 0.88rem; color: #1e293b; margin-top: 4px; line-height: 1.5;">${escapeHtml(proc.executive_rationale)}</p>
       </div>
       ${stepsHtml}
@@ -1044,7 +1046,7 @@ function renderOpportunityResults(data) {
         thinkingBody.style.display = isHidden ? 'flex' : 'none';
         const btnText = document.getElementById('ai-toggle-btn-text');
         const btnArrow = document.getElementById('ai-toggle-arrow');
-        if (btnText) btnText.innerText = isHidden ? 'Collapse Breakdown' : 'View Diagnostic Breakdown';
+        if (btnText) btnText.innerText = isHidden ? 'Collapse Practice Breakdown' : 'View Detailed Practice Breakdown';
         if (btnArrow) btnArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
       };
     }
@@ -1059,8 +1061,11 @@ function renderOpportunityResults(data) {
     container.innerHTML = `
       <div class="empty-state-box">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <h4>No Nearby Opportunities Found Within Selected Radius</h4>
-        <p>Try expanding your commute distance to 40 km or selecting "All Specialties" to explore the active Ontario database.</p>
+        <h4>No Specific Positions Found for "${escapeHtml(origin.specialty || 'Selected Specialty')}" Within Selected Radius</h4>
+        <p>Currently 340 active medical positions are available across Ontario in Family Medicine, Pediatrics, Internal Medicine, and Psychiatry.</p>
+        <button class="btn btn-outline" style="margin-top: 14px;" onclick="document.getElementById('finder-specialty-select').value='All'; runOpportunitySimulation();">
+          Explore All Active Ontario Specialties (340 Positions)
+        </button>
       </div>
     `;
     return;
@@ -1093,7 +1098,7 @@ function renderOpportunityResults(data) {
               <span class="dot-separator">&bull;</span>
               <span class="opt-location-text">${escapeHtml(s.city)} (${escapeHtml(s.street_address)})</span>
               <span class="dot-separator">&bull;</span>
-              <span class="opt-dist-chip">${s.distance_km} km away (~${s.one_way_drive_minutes} min drive)</span>
+              <span class="opt-dist-chip">${s.distance_km} km from origin</span>
             </div>
           </div>
         </div>
@@ -1113,9 +1118,9 @@ function renderOpportunityResults(data) {
         </div>
 
         <div class="opt-stat-card">
-          <span class="stat-meta-label">Commute & Location</span>
+          <span class="stat-meta-label">Regional Distance</span>
           <span class="stat-highlight-val text-cyan">${s.distance_km} km away</span>
-          <span class="stat-meta-sub">~${s.one_way_drive_minutes} min drive from your origin</span>
+          <span class="stat-meta-sub">In ${escapeHtml(s.city || 'Ontario')} (${escapeHtml(s.corridor || 'GTA Core')})</span>
         </div>
       </div>
 
@@ -1343,7 +1348,7 @@ function drawFinderCanvas(data) {
   ctx.fillStyle = '#64748b';
   ctx.font = '11px Plus Jakarta Sans';
   ctx.textAlign = 'center';
-  ctx.fillText('Commute Distance from Origin (km)', padding.left + graphW / 2, h - 8);
+  ctx.fillText('Regional Distance from Origin (km)', padding.left + graphW / 2, h - 8);
 }
 
 function debounce(fn, ms) {
@@ -1779,26 +1784,14 @@ async function initRealTimeMap() {
       scrollWheelZoom: true,
     });
 
-    // Clean, high-performance light CartoDB Voyager tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OSM</a>',
-      subdomains: 'abcd',
+    // 100% Free OpenStreetMap standard tiles (Zero API key required, crisp and watermark-free)
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(realTimeMap);
 
-    // 500 km planning radius circle around Toronto (matching screenshot)
-    const torontoCenter = [43.6532, -79.3832];
-    L.circle(torontoCenter, {
-      radius: 500000,
-      color: '#0284c7',
-      weight: 1.5,
-      dashArray: '6, 6',
-      fillColor: '#0284c7',
-      fillOpacity: 0.02,
-      interactive: false,
-    }).addTo(realTimeMap);
-
     // Toronto Anchor Marker
+    const torontoCenter = [43.6532, -79.3832];
     const torontoIcon = L.divIcon({
       className: 'toronto-anchor-icon',
       html: `
@@ -1811,7 +1804,58 @@ async function initRealTimeMap() {
       .bindTooltip('<strong>Toronto (GTA Core Anchor)</strong><br>0 km reference baseline', { direction: 'top' })
       .addTo(realTimeMap);
 
-    mapMarkersLayer = L.layerGroup().addTo(realTimeMap);
+    // Initialize Marker Cluster Group if available for clean non-overlapping markers
+    if (typeof L.markerClusterGroup === 'function') {
+      mapMarkersLayer = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 36,
+        spiderfyOnMaxZoom: true,
+        disableClusteringAtZoom: 11,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function (cluster) {
+          const markers = cluster.getAllChildMarkers();
+          let totalJobs = 0;
+          let totalSalary = 0;
+          let salaryCount = 0;
+          let maxNrrri = 0;
+          let hasPro = false;
+
+          markers.forEach((m) => {
+            const d = m.__communityData;
+            if (d) {
+              totalJobs += (d.total_jobs || 1);
+              if (d.avg_gross_salary > 0) {
+                totalSalary += d.avg_gross_salary;
+                salaryCount++;
+              }
+              if (d.nrrri_incentive_amount > maxNrrri) maxNrrri = d.nrrri_incentive_amount;
+              if (d.pro_ros_status && d.pro_ros_status.includes('Confirmed')) hasPro = true;
+            }
+          });
+
+          const avgSal = salaryCount > 0 ? Math.round(totalSalary / salaryCount / 1000) : null;
+          const displayLabel = avgSal ? `$${avgSal}k` : `${totalJobs} Jobs`;
+          const nrrriTag = maxNrrri > 0 ? `<span class="cluster-nrrri-tag">+$${Math.round(maxNrrri / 1000)}k</span>` : '';
+          const borderClass = hasPro ? 'cluster-pro' : 'cluster-std';
+
+          return L.divIcon({
+            className: 'salary-cluster-icon',
+            html: `
+              <div class="salary-cluster-pill ${borderClass}">
+                <span class="cluster-child-count">${cluster.getChildCount()}</span>
+                <span class="cluster-main-label">${displayLabel}</span>
+                ${nrrriTag}
+              </div>
+            `,
+            iconSize: [110, 32],
+            iconAnchor: [55, 16],
+          });
+        },
+      });
+      realTimeMap.addLayer(mapMarkersLayer);
+    } else {
+      mapMarkersLayer = L.layerGroup().addTo(realTimeMap);
+    }
   }
 
   // Hook up filter dropdowns & controls
@@ -1946,6 +1990,7 @@ function filterAndRenderMap() {
     });
 
     const marker = L.marker([c.latitude, c.longitude], { icon });
+    marker.__communityData = c;
 
     // Popup Content
     const popupHtml = `
